@@ -3,9 +3,23 @@
   "version": "1.0.0",
   "description": "BTC/USDT Global Price Index",
   "scripts": {
-    "start": "cargo run"
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "npm run build && cargo run",
+    "format": "prettier --write \"static/js/**/*.ts\"",
+    "lint": "eslint \"static/js/**/*.ts\"",
+    "test": "jest"
   },
   "dependencies": {
-    "tailwindcss": "^3.4.1"
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.5",
+    "ts-jest": "^29.1.2"
   }
 }

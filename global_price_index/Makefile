@@ -3,32 +3,55 @@ BIN_NAME := global_price_index
 
 # Commands
 CARGO := cargo
+NPM := npm
+TSC := npx tsc
 
 # Build the project
 build:
-	$(CARGO) build --release
+	@echo "Building TypeScript..."
+	@$(NPM) run build
+	@echo "Building Rust project..."
+	@$(CARGO) build --release
 
 # Run the project
 run:
-	$(CARGO) run --release
+	@echo "Starting the application..."
+	@$(CARGO) run --release
 
 # Format the project
 format:
-	$(CARGO) fmt
+	@echo "Formatting TypeScript..."
+	@$(NPM) run format
+	@echo "Formatting Rust..."
+	@$(CARGO) fmt
 
 # Check for linting
 lint:
-	$(CARGO) clippy --all-targets --allow-features -- -D warnings
+	@echo "Linting TypeScript..."
+	@$(NPM) run lint
+	@echo "Linting Rust..."
+	@$(CARGO) clippy --all-targets --allow-features -- -D warnings
 
 # Run tests
 test:
-	$(CARGO) test
+	@echo "Running TypeScript tests..."
+	@$(NPM) run test
+	@echo "Running Rust tests..."
+	@$(CARGO) test
 
 # Clean the project
 clean:
-	$(CARGO) clean
+	@echo "Cleaning build artifacts..."
+	@rm -rf node_modules
+	@rm -rf static/js/*.js
+	@$(CARGO) clean
 
-.PHONY: all build clean install run
+# Watch for changes and rebuild
+watch:
+	@echo "Watching for changes..."
+	@$(NPM) run watch
+
+.PHONY: all build clean install run format lint test watch help
 
 # Default target
 all: install build
@@ -36,30 +59,18 @@ all: install build
 # Install dependencies
 install:
 	@echo "Installing dependencies..."
-	@npm install
-	@cargo build
-
-# Build the project
-build:
-	@echo "Building Rust project..."
-	@cargo build --release
-
-# Clean build artifacts
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf node_modules
-	@cargo clean
-
-# Run the application
-run:
-	@echo "Starting the application..."
-	@cargo run
+	@$(NPM) install
+	@$(CARGO) build
 
 # Help command
 help:
 	@echo "Available commands:"
 	@echo "  make install    - Install npm and cargo dependencies"
-	@echo "  make build      - Build the project"
+	@echo "  make build      - Build the project (TypeScript and Rust)"
 	@echo "  make clean      - Clean build artifacts"
 	@echo "  make run        - Run the application"
+	@echo "  make format     - Format TypeScript and Rust code"
+	@echo "  make lint       - Lint TypeScript and Rust code"
+	@echo "  make test       - Run TypeScript and Rust tests"
+	@echo "  make watch      - Watch for changes and rebuild"
 	@echo "  make help       - Show this help message"

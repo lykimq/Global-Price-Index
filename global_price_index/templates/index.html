@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BTC/USDT Global Price Index</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .price-up { color: #10B981; }
-        .price-down { color: #EF4444; }
-        .refresh-animation { animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-    </style>
+    <link href="/static/css/styles.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -54,61 +49,6 @@
         </div>
     </div>
 
-    <script>
-        let lastPrices = {};
-
-        function formatPrice(price) {
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(price);
-        }
-
-        function formatTimestamp(timestamp) {
-            return new Date(timestamp).toLocaleTimeString();
-        }
-
-        function updatePrices() {
-            fetch('/global-price')
-                .then(response => response.json())
-                .then(data => {
-                    // Update global price
-                    const globalPriceEl = document.getElementById('global-price');
-                    const globalTimestampEl = document.getElementById('global-timestamp');
-
-                    if (lastPrices.global !== data.price) {
-                        globalPriceEl.className = `text-3xl font-bold ${data.price > lastPrices.global ? 'price-up' : 'price-down'}`;
-                    }
-                    globalPriceEl.textContent = `$${formatPrice(data.price)}`;
-                    globalTimestampEl.textContent = `Updated: ${formatTimestamp(data.timestamp)}`;
-
-                    // Update exchange prices
-                    const exchangePricesEl = document.getElementById('exchange-prices');
-                    exchangePricesEl.innerHTML = data.exchange_prices.map(exchange => {
-                        const priceClass = lastPrices[exchange.exchange] !== exchange.mid_price
-                            ? (exchange.mid_price > lastPrices[exchange.exchange] ? 'price-up' : 'price-down')
-                            : '';
-                        lastPrices[exchange.exchange] = exchange.mid_price;
-
-                        return `
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">${exchange.exchange}</span>
-                                <span class="font-semibold ${priceClass}">$${formatPrice(exchange.mid_price)}</span>
-                            </div>
-                        `;
-                    }).join('');
-
-                    // Update last update time
-                    document.getElementById('last-update').textContent = formatTimestamp(data.timestamp);
-                })
-                .catch(error => console.error('Error fetching prices:', error));
-        }
-
-        // Initial update
-        updatePrices();
-
-        // Update every 5 seconds
-        setInterval(updatePrices, 5000);
-    </script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
