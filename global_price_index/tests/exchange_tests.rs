@@ -87,11 +87,15 @@ async fn test_mid_price_calculation() -> Result<()>{
 fn test_order_book_mid_price_calculation() {
     let order_book = OrderBook {
         bids: vec![
-            ["50000.0".to_string(), "2.0".to_string()],  // Best bid
+            // Best bid: 2.0 BTC at 50,000 USDT (highest price someone will buy at)
+            ["50000.0".to_string(), "2.0".to_string()],
+            // 3.0 BTC at 49,900 USDT
             ["49900.0".to_string(), "3.0".to_string()],
         ],
         asks: vec![
-            ["50100.0".to_string(), "1.0".to_string()],  // Best ask
+            // Best ask: 1.0 BTC at 50,100 USDT (lowest price someone will sell at)
+            ["50100.0".to_string(), "1.0".to_string()],
+            // 2.0 BTC at 50,200 USDT
             ["50200.0".to_string(), "2.0".to_string()],
         ],
         timestamp: SystemTime::now(),
@@ -100,8 +104,8 @@ fn test_order_book_mid_price_calculation() {
     let mid_price = order_book.calculate_mid_price().unwrap();
 
     // Mid price calculation:
-    // Best bid: 50000.0
-    // Best ask: 50100.0
+    // Best bid: 50000.0 (highest buy price)
+    // Best ask: 50100.0 (lowest sell price)
     // Mid price: (50000.0 + 50100.0) / 2 = 50050.0
     // Implementation rounds to 2 decimal places
     assert!((mid_price - 50050.0).abs() < 0.01);
