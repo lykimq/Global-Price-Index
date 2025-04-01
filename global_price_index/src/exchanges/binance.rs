@@ -11,12 +11,47 @@ use tokio::sync::RwLock;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use url::Url;
 use tokio::time::sleep;
+use dotenv::dotenv;
+use std::env;
 
-const BINANCE_WS_URL: &str = "wss://stream.binance.com:9443/ws/btcusdt@depth";
-const BINANCE_REST_URL: &str = "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000";
-const MAX_RECONNECT_ATTEMPTS: u32 = 5;
-const INITIAL_RECONNECT_DELAY: Duration = Duration::from_secs(1);
-const PING_INTERVAL: Duration = Duration::from_secs(30); // Send ping every 30 seconds
+// Load environment variables with fallbacks
+fn get_binance_ws_url() -> String {
+    dotenv().ok();
+    env::var("BINANCE_WS_URL")
+        .unwrap_or_else(|_| "wss://stream.binance.com:9443/ws/btcusdt@depth".to_string())
+}
+
+fn get_binance_rest_url() -> String {
+    dotenv().ok();
+    env::var("BINANCE_REST_URL")
+        .unwrap_or_else(|_| "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000".to_string())
+}
+
+fn get_max_reconnect_attempts() -> u32 {
+    dotenv().ok();
+    env::var("MAX_RECONNECT_ATTEMPTS")
+        .unwrap_or_else(|_| "5".to_string())
+        .parse()
+        .unwrap_or(5)
+}
+
+fn get_initial_reconnect_delay() -> Duration {
+    dotenv().ok();
+    let seconds = env::var("INITIAL_RECONNECT_DELAY")
+        .unwrap_or_else(|_| "1".to_string())
+        .parse()
+        .unwrap_or(1);
+    Duration::from_secs(seconds)
+}
+
+fn get_ping_interval() -> Duration {
+    dotenv().ok();
+    let seconds = env::var("PING_INTERVAL")
+        .unwrap_or_else(|_| "30".to_string())
+        .parse()
+        .unwrap_or(30);
+    Duration::from_secs(seconds)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct BinanceOrderBook {
@@ -55,7 +90,7 @@ impl BinanceExchange {
         let client = reqwest::Client::new();
         let response : BinanceOrderBook =
         client
-            .get(BINANCE_REST_URL)
+            .get(&get_binance_rest_url())
             .send()
             .await?
             .json()
@@ -73,7 +108,7 @@ impl BinanceExchange {
     }
 
     async fn connect_websocket() -> Result<(futures::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, Message>, futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>)> {
-        let url = Url::parse(BINANCE_WS_URL).map_err(|e| {
+        let url = Url::parse(&get_binance_ws_url()).map_err(|e| {
             PriceIndexError::WebSocketError(format!("Failed to parse WebSocket URL: {}", e))
         })?;
 
@@ -90,7 +125,7 @@ impl BinanceExchange {
         order_book: Arc<RwLock<OrderBook>>,
     ) {
         let mut last_pong = SystemTime::now();
-        let mut ping_interval = tokio::time::interval(PING_INTERVAL);
+        let mut ping_interval = tokio::time::interval(get_ping_interval());
 
         loop {
             tokio::select! {
@@ -131,7 +166,7 @@ impl BinanceExchange {
                 }
                 _ = ping_interval.tick() => {
                     // Check if we haven't received a pong for too long
-                    if last_pong.elapsed().unwrap_or(Duration::from_secs(0)) > PING_INTERVAL * 2 {
+                    if last_pong.elapsed().unwrap_or(Duration::from_secs(0)) > get_ping_interval() * 2 {
                         eprintln!("No pong received for too long, reconnecting...");
                         break;
                     }
@@ -149,7 +184,7 @@ impl BinanceExchange {
     async fn start_websocket(&self) -> Result<()> {
         let order_book = self.order_book.clone();
         let mut reconnect_attempt = 0;
-        let mut reconnect_delay = INITIAL_RECONNECT_DELAY;
+        let mut reconnect_delay = get_initial_reconnect_delay();
 
         tokio::spawn(async move {
             loop {
@@ -157,7 +192,7 @@ impl BinanceExchange {
                     Ok((write, read)) => {
                         // Reset reconnection parameters on successful connection
                         reconnect_attempt = 0;
-                        reconnect_delay = INITIAL_RECONNECT_DELAY;
+                        reconnect_delay = get_initial_reconnect_delay();
                         Self::handle_websocket_messages(read, write, order_book.clone()).await;
                     }
                     Err(e) => {
@@ -166,12 +201,12 @@ impl BinanceExchange {
                 }
 
                 // Implement exponential backoff for reconnection
-                if reconnect_attempt < MAX_RECONNECT_ATTEMPTS {
+                if reconnect_attempt < get_max_reconnect_attempts() {
                     eprintln!(
                         "Attempting to reconnect in {} seconds (attempt {}/{})",
                         reconnect_delay.as_secs(),
                         reconnect_attempt + 1,
-                        MAX_RECONNECT_ATTEMPTS
+                        get_max_reconnect_attempts()
                     );
                     sleep(reconnect_delay).await;
                     reconnect_attempt += 1;

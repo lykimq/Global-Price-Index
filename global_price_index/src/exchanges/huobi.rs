@@ -5,8 +5,15 @@ use serde::{Deserialize, Serialize};
 use crate::error::{PriceIndexError, Result};
 use crate::models::OrderBook;
 use std::time::SystemTime;
+use dotenv::dotenv;
+use std::env;
 
-const HUOBI_BASE_URL: &str = "https://api.huobi.pro/market/depth";
+// Load environment variable with fallback
+fn get_huobi_url() -> String {
+    dotenv().ok();
+    env::var("HUOBI_URL")
+        .unwrap_or_else(|_| "https://api.huobi.pro/market/depth".to_string())
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct HuobiOrderBook {
@@ -45,7 +52,7 @@ impl HuobiExchange {
         ];
 
         let response: HuobiResponse = client
-            .get(HUOBI_BASE_URL)
+            .get(&get_huobi_url())
             .query(&params)
             .send()
             .await?
@@ -82,7 +89,7 @@ impl Exchange for HuobiExchange {
         // Send the request to Huobi
         let response: HuobiResponse = self
             .client
-            .get(HUOBI_BASE_URL)
+            .get(&get_huobi_url())
             .query(&params)
             .send()
             .await?

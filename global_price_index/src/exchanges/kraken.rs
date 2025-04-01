@@ -6,8 +6,15 @@ use serde::{Deserialize, Serialize};
 use crate::error::{PriceIndexError, Result};
 use crate::models::OrderBook;
 use std::time::SystemTime;
+use dotenv::dotenv;
+use std::env;
 
-const KRAKEN_URL: &str = "https://api.kraken.com/0/public/Depth?pair=XBTUSDT";
+// Load environment variable with fallback
+fn get_kraken_url() -> String {
+    dotenv().ok();
+    env::var("KRAKEN_URL")
+        .unwrap_or_else(|_| "https://api.kraken.com/0/public/Depth?pair=XBTUSDT".to_string())
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct KrakenOrderBook {
@@ -64,7 +71,7 @@ impl KrakenExchange {
         // Verify the exchange is accessible by making a test request
         let params = [("pair", "XBTUSDT"), ("count", "1")];
         let response: KrakenResponse = client
-            .get(KRAKEN_URL)
+            .get(&get_kraken_url())
             .query(&params)
             .send()
             .await?
@@ -92,7 +99,7 @@ impl Exchange for KrakenExchange {
         let params = [("pair", "XBTUSDT"), ("count", "100")];
         let response: KrakenResponse = self
             .client
-            .get(KRAKEN_URL)
+            .get(&get_kraken_url())
             .query(&params)
             .send()
             .await?

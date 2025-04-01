@@ -17,3 +17,4 @@ tokio-tungstenite = { version = "0.21.0", features = ["native-tls"] }
 url = "2.5.0"
 async-trait = "0.1.77"
 chrono = { version = "0.4.34", features = ["serde"] }
+dotenv = "0.15"
