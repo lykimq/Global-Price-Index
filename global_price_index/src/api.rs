@@ -3,12 +3,12 @@
 use crate::exchanges::{
     binance::BinanceExchange, huobi::HuobiExchange, kraken::KrakenExchange, Exchange,
 };
-use actix_web::{web, App, HttpServer, HttpResponse, Responder};
-use actix_files as fs;
-use std::sync::Arc;
 use crate::models::GlobalPriceIndex;
+use actix_files as fs;
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use std::env;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -18,7 +18,11 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(binance: Arc<BinanceExchange>, kraken: Arc<KrakenExchange>, huobi: Arc<HuobiExchange>) -> Self {
+    pub fn new(
+        binance: Arc<BinanceExchange>,
+        kraken: Arc<KrakenExchange>,
+        huobi: Arc<HuobiExchange>,
+    ) -> Self {
         Self {
             binance,
             kraken,
@@ -94,9 +98,21 @@ pub async fn start_server() -> std::io::Result<()> {
     let static_path = format!("./{}/{}", frontend_dir, static_dir);
 
     // Initialize exchanges
-    let binance = Arc::new(BinanceExchange::new().await.expect("Failed to create Binance exchange"));
-    let kraken = Arc::new(KrakenExchange::new().await.expect("Failed to create Kraken exchange"));
-    let huobi = Arc::new(HuobiExchange::new().await.expect("Failed to create Huobi exchange"));
+    let binance = Arc::new(
+        BinanceExchange::new()
+            .await
+            .expect("Failed to create Binance exchange"),
+    );
+    let kraken = Arc::new(
+        KrakenExchange::new()
+            .await
+            .expect("Failed to create Kraken exchange"),
+    );
+    let huobi = Arc::new(
+        HuobiExchange::new()
+            .await
+            .expect("Failed to create Huobi exchange"),
+    );
 
     // Create the app state
     let app_state = web::Data::new(AppState::new(binance, kraken, huobi));
@@ -111,11 +127,10 @@ pub async fn start_server() -> std::io::Result<()> {
                 fs::Files::new("/static", &static_path)
                     .show_files_listing()
                     .prefer_utf8(true)
-                    .use_last_modified(true)
+                    .use_last_modified(true),
             )
     })
     .bind(&addr)?
     .run()
     .await
 }
-

@@ -1,79 +1,90 @@
 interface ExchangePrice {
-    exchange: string;
-    mid_price: number;
+  exchange: string;
+  mid_price: number;
 }
 
 interface PriceData {
-    price: number;
-    timestamp: string;
-    exchange_prices: ExchangePrice[];
+  price: number;
+  timestamp: string;
+  exchange_prices: ExchangePrice[];
 }
 
 class PriceDisplay {
-    private lastPrices: { [key: string]: number } = {};
+  private lastPrices: { [key: string]: number } = {};
 
-    private formatPrice(price: number): string {
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(price);
+  private formatPrice(price: number): string {
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  }
+
+  private formatTimestamp(timestamp: string): string {
+    return new Date(timestamp).toLocaleTimeString();
+  }
+
+  private updateGlobalPrice(data: PriceData): void {
+    const globalPriceEl = document.getElementById("global-price");
+    const globalTimestampEl = document.getElementById("global-timestamp");
+
+    if (globalPriceEl && globalTimestampEl) {
+      if (this.lastPrices.global !== data.price) {
+        globalPriceEl.className = `text-3xl font-bold ${
+          data.price > this.lastPrices.global ? "price-up" : "price-down"
+        }`;
+      }
+      globalPriceEl.textContent = `$${this.formatPrice(data.price)}`;
+      globalTimestampEl.textContent = `Updated: ${this.formatTimestamp(
+        data.timestamp
+      )}`;
     }
+  }
 
-    private formatTimestamp(timestamp: string): string {
-        return new Date(timestamp).toLocaleTimeString();
-    }
+  private updateExchangePrices(data: PriceData): void {
+    const exchangePricesEl = document.getElementById("exchange-prices");
+    if (!exchangePricesEl) return;
 
-    private updateGlobalPrice(data: PriceData): void {
-        const globalPriceEl = document.getElementById('global-price');
-        const globalTimestampEl = document.getElementById('global-timestamp');
+    exchangePricesEl.innerHTML = data.exchange_prices
+      .map((exchange) => {
+        const priceClass =
+          this.lastPrices[exchange.exchange] !== exchange.mid_price
+            ? exchange.mid_price > this.lastPrices[exchange.exchange]
+              ? "price-up"
+              : "price-down"
+            : "";
+        this.lastPrices[exchange.exchange] = exchange.mid_price;
 
-        if (globalPriceEl && globalTimestampEl) {
-            if (this.lastPrices.global !== data.price) {
-                globalPriceEl.className = `text-3xl font-bold ${data.price > this.lastPrices.global ? 'price-up' : 'price-down'}`;
-            }
-            globalPriceEl.textContent = `$${this.formatPrice(data.price)}`;
-            globalTimestampEl.textContent = `Updated: ${this.formatTimestamp(data.timestamp)}`;
-        }
-    }
-
-    private updateExchangePrices(data: PriceData): void {
-        const exchangePricesEl = document.getElementById('exchange-prices');
-        if (!exchangePricesEl) return;
-
-        exchangePricesEl.innerHTML = data.exchange_prices.map(exchange => {
-            const priceClass = this.lastPrices[exchange.exchange] !== exchange.mid_price
-                ? (exchange.mid_price > this.lastPrices[exchange.exchange] ? 'price-up' : 'price-down')
-                : '';
-            this.lastPrices[exchange.exchange] = exchange.mid_price;
-
-            return `
+        return `
                 <div class="flex justify-between items-center">
                     <span class="text-gray-600">${exchange.exchange}</span>
-                    <span class="font-semibold ${priceClass}">$${this.formatPrice(exchange.mid_price)}</span>
+                    <span class="font-semibold ${priceClass}">$${this.formatPrice(
+          exchange.mid_price
+        )}</span>
                 </div>
             `;
-        }).join('');
-    }
+      })
+      .join("");
+  }
 
-    private updateLastUpdateTime(timestamp: string): void {
-        const lastUpdateEl = document.getElementById('last-update');
-        if (lastUpdateEl) {
-            lastUpdateEl.textContent = this.formatTimestamp(timestamp);
-        }
+  private updateLastUpdateTime(timestamp: string): void {
+    const lastUpdateEl = document.getElementById("last-update");
+    if (lastUpdateEl) {
+      lastUpdateEl.textContent = this.formatTimestamp(timestamp);
     }
+  }
 
-    public async updatePrices(): Promise<void> {
-        try {
-            const response = await fetch('/global-price');
-            const data: PriceData = await response.json();
+  public async updatePrices(): Promise<void> {
+    try {
+      const response = await fetch("/global-price");
+      const data: PriceData = await response.json();
 
-            this.updateGlobalPrice(data);
-            this.updateExchangePrices(data);
-            this.updateLastUpdateTime(data.timestamp);
-        } catch (error) {
-            console.error('Error fetching prices:', error);
-        }
+      this.updateGlobalPrice(data);
+      this.updateExchangePrices(data);
+      this.updateLastUpdateTime(data.timestamp);
+    } catch (error) {
+      console.error("Error fetching prices:", error);
     }
+  }
 }
 
 // Initialize the price display

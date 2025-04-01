@@ -1,13 +1,13 @@
 // REST client, polling logic
 
-use crate::exchanges::Exchange;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use crate::error::{PriceIndexError, Result};
+use crate::exchanges::Exchange;
 use crate::models::OrderBook;
-use std::time::SystemTime;
+use async_trait::async_trait;
 use dotenv::dotenv;
+use serde::{Deserialize, Serialize};
 use std::env;
+use std::time::SystemTime;
 
 // Load environment variable with fallback
 fn get_kraken_url() -> String {
@@ -24,7 +24,9 @@ struct KrakenOrderBook {
     asks: Vec<[String; 3]>, // [price, volume, timestamp]
 }
 
-fn deserialize_order_book<'de, D>(deserializer: D) -> std::result::Result<Vec<[String; 3]>, D::Error>
+fn deserialize_order_book<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Vec<[String; 3]>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -33,9 +35,16 @@ where
 
     raw.into_iter()
         .map(|[price, volume, timestamp]| {
-            let price = price.as_str().ok_or_else(|| D::Error::custom("price must be a string"))?.to_string();
-            let volume = volume.as_str().ok_or_else(|| D::Error::custom("volume must be a string"))?.to_string();
-            let timestamp = timestamp.as_i64()
+            let price = price
+                .as_str()
+                .ok_or_else(|| D::Error::custom("price must be a string"))?
+                .to_string();
+            let volume = volume
+                .as_str()
+                .ok_or_else(|| D::Error::custom("volume must be a string"))?
+                .to_string();
+            let timestamp = timestamp
+                .as_i64()
                 .ok_or_else(|| D::Error::custom("timestamp must be a number"))?
                 .to_string();
 
@@ -66,7 +75,9 @@ impl KrakenExchange {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(5))
             .build()
-            .map_err(|e| PriceIndexError::ExchangeError(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                PriceIndexError::ExchangeError(format!("Failed to create HTTP client: {}", e))
+            })?;
 
         // Verify the exchange is accessible by making a test request
         let params = [("pair", "XBTUSDT"), ("count", "1")];
@@ -115,8 +126,16 @@ impl Exchange for KrakenExchange {
 
         let order_book = response.result.xbtusdt;
         Ok(OrderBook {
-            bids: order_book.bids.into_iter().map(|[price, _, _]| [price, "0".to_string()]).collect(),
-            asks: order_book.asks.into_iter().map(|[price, _, _]| [price, "0".to_string()]).collect(),
+            bids: order_book
+                .bids
+                .into_iter()
+                .map(|[price, _, _]| [price, "0".to_string()])
+                .collect(),
+            asks: order_book
+                .asks
+                .into_iter()
+                .map(|[price, _, _]| [price, "0".to_string()])
+                .collect(),
             timestamp: SystemTime::now(),
         })
     }

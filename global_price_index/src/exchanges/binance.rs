@@ -1,19 +1,19 @@
 // WebSocket client, order book sync
-use crate::exchanges::Exchange;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use crate::error::{PriceIndexError, Result};
+use crate::exchanges::Exchange;
 use crate::models::OrderBook;
-use std::time::{SystemTime, Duration};
-use futures::{SinkExt, StreamExt};
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
-use tokio::net::TcpStream;
-use url::Url;
-use tokio::time::sleep;
+use async_trait::async_trait;
 use dotenv::dotenv;
+use futures::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
 use std::env;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+use tokio::net::TcpStream;
+use tokio::sync::RwLock;
+use tokio::time::sleep;
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use url::Url;
 
 // Type aliases for WebSocket types
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -29,8 +29,9 @@ fn get_binance_ws_url() -> String {
 
 fn get_binance_rest_url() -> String {
     dotenv().ok();
-    env::var("BINANCE_REST_URL")
-        .unwrap_or_else(|_| "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000".to_string())
+    env::var("BINANCE_REST_URL").unwrap_or_else(|_| {
+        "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000".to_string()
+    })
 }
 
 fn get_max_reconnect_attempts() -> u32 {
@@ -84,18 +85,17 @@ impl BinanceExchange {
             asks: vec![],
             timestamp: SystemTime::now(),
         }));
-        let exchange = Self {order_book};
+        let exchange = Self { order_book };
 
         exchange.initialize().await?;
-        Ok (exchange)
+        Ok(exchange)
     }
 
     // Initialize the exchange by fetching initial order book data
     async fn initialize(&self) -> Result<()> {
         // Fetch initial order book data from Binance REST API
         let client = reqwest::Client::new();
-        let response : BinanceOrderBook =
-        client
+        let response: BinanceOrderBook = client
             .get(&get_binance_rest_url())
             .send()
             .await?
@@ -250,7 +250,7 @@ impl Exchange for BinanceExchange {
     }
 
     // Fetch the current order book
-    async fn fetch_order_book (&self) -> Result<OrderBook>{
+    async fn fetch_order_book(&self) -> Result<OrderBook> {
         Ok(self.order_book.read().await.clone())
     }
 }

@@ -1,7 +1,7 @@
 use global_price_index::{
-    exchanges::{binance::BinanceExchange, kraken::KrakenExchange, huobi::HuobiExchange, Exchange},
+    error::Result,
+    exchanges::{binance::BinanceExchange, huobi::HuobiExchange, kraken::KrakenExchange, Exchange},
     models::OrderBook,
-    error::Result
 };
 use std::time::SystemTime;
 
@@ -30,7 +30,7 @@ async fn test_binance_order_book_calculation() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_kraken_order_book_calculation() -> Result<()>{
+async fn test_kraken_order_book_calculation() -> Result<()> {
     let exchange = KrakenExchange::new().await?;
     let order_book = exchange.fetch_order_book().await?;
 
@@ -72,7 +72,7 @@ async fn test_huobi_orderbook_calculation() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_mid_price_calculation() -> Result<()>{
+async fn test_mid_price_calculation() -> Result<()> {
     let exchange = BinanceExchange::new().await?;
     let price = exchange.get_mid_price().await?;
 
@@ -113,7 +113,7 @@ fn test_order_book_mid_price_calculation() {
 
 #[test]
 fn test_empty_order_book_mid_price() {
-    let order_book = OrderBook{
+    let order_book = OrderBook {
         bids: vec![],
         asks: vec![],
         timestamp: SystemTime::now(),
