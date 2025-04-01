@@ -10,13 +10,24 @@ use crate::models::GlobalPriceIndex;
 use dotenv::dotenv;
 use std::env;
 
+#[derive(Clone)]
 pub struct AppState {
-    binance: Arc<BinanceExchange>,
-    kraken: Arc<KrakenExchange>,
-    huobi: Arc<HuobiExchange>,
+    pub binance: Arc<BinanceExchange>,
+    pub kraken: Arc<KrakenExchange>,
+    pub huobi: Arc<HuobiExchange>,
 }
 
-async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
+impl AppState {
+    pub fn new(binance: Arc<BinanceExchange>, kraken: Arc<KrakenExchange>, huobi: Arc<HuobiExchange>) -> Self {
+        Self {
+            binance,
+            kraken,
+            huobi,
+        }
+    }
+}
+
+pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     // Create a vector to store the prices from all exchanges
     let mut exchange_prices = Vec::new();
 
@@ -88,11 +99,7 @@ pub async fn start_server() -> std::io::Result<()> {
     let huobi = Arc::new(HuobiExchange::new().await.expect("Failed to create Huobi exchange"));
 
     // Create the app state
-    let app_state = web::Data::new(AppState {
-        binance,
-        kraken,
-        huobi,
-    });
+    let app_state = web::Data::new(AppState::new(binance, kraken, huobi));
 
     // Start the server
     HttpServer::new(move || {
