@@ -8,11 +8,17 @@ use std::time::{SystemTime, Duration};
 use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tokio_tungstenite::{connect_async, tungstenite::Message, WebSocketStream, MaybeTlsStream};
+use tokio::net::TcpStream;
 use url::Url;
 use tokio::time::sleep;
 use dotenv::dotenv;
 use std::env;
+
+// Type aliases for WebSocket types
+type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+type WsSink = futures::stream::SplitSink<WsStream, Message>;
+type WsStreamRead = futures::stream::SplitStream<WsStream>;
 
 // Load environment variables with fallbacks
 fn get_binance_ws_url() -> String {
@@ -107,7 +113,7 @@ impl BinanceExchange {
         Ok(())
     }
 
-    async fn connect_websocket() -> Result<(futures::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, Message>, futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>)> {
+    async fn connect_websocket() -> Result<(WsSink, WsStreamRead)> {
         let url = Url::parse(&get_binance_ws_url()).map_err(|e| {
             PriceIndexError::WebSocketError(format!("Failed to parse WebSocket URL: {}", e))
         })?;
@@ -120,8 +126,8 @@ impl BinanceExchange {
     }
 
     async fn handle_websocket_messages(
-        mut read: futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
-        mut write: futures::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, Message>,
+        mut read: WsStreamRead,
+        mut write: WsSink,
         order_book: Arc<RwLock<OrderBook>>,
     ) {
         let mut last_pong = SystemTime::now();
