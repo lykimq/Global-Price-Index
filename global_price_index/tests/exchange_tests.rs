@@ -87,15 +87,11 @@ async fn test_mid_price_calculation() -> Result<()>{
 fn test_order_book_mid_price_calculation() {
     let order_book = OrderBook {
         bids: vec![
-            // 2.0 BTC at 50,000 USDT each = 100,000 USDT worth
-            ["50000.0".to_string(), "2.0".to_string()],
-            // 3.0 BTC at 49,900 USDT each = 149,700 USDT worth
+            ["50000.0".to_string(), "2.0".to_string()],  // Best bid
             ["49900.0".to_string(), "3.0".to_string()],
         ],
         asks: vec![
-            // 1.0 BTC at 50,100 USDT each = 50,100 USDT worth
-            ["50100.0".to_string(), "1.0".to_string()],
-            // 2.0 BTC at 50,200 USDT each = 100,400 USDT worth
+            ["50100.0".to_string(), "1.0".to_string()],  // Best ask
             ["50200.0".to_string(), "2.0".to_string()],
         ],
         timestamp: SystemTime::now(),
@@ -107,5 +103,30 @@ fn test_order_book_mid_price_calculation() {
     // Best bid: 50000.0
     // Best ask: 50100.0
     // Mid price: (50000.0 + 50100.0) / 2 = 50050.0
+    // Implementation rounds to 2 decimal places
     assert!((mid_price - 50050.0).abs() < 0.01);
+}
+
+#[test]
+fn test_empty_order_book_mid_price() {
+    let order_book = OrderBook{
+        bids: vec![],
+        asks: vec![],
+        timestamp: SystemTime::now(),
+    };
+
+    let mid_price = order_book.calculate_mid_price();
+    assert!(mid_price.is_none());
+}
+
+#[test]
+fn test_invalid_order_book_mid_price() {
+    let order_book = OrderBook {
+        bids: vec![["invalid".to_string(), "1.0".to_string()]],
+        asks: vec![["50100.0".to_string(), "1.0".to_string()]],
+        timestamp: SystemTime::now(),
+    };
+
+    let mid_price = order_book.calculate_mid_price();
+    assert!(mid_price.is_none());
 }
