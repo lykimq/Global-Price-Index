@@ -18,3 +18,12 @@ url = "2.5.0"
 async-trait = "0.1.77"
 chrono = { version = "0.4.34", features = ["serde"] }
 dotenv = "0.15"
+
+[dev-dependencies]
+tokio = { version = "1.36.0", features = ["full"] }
+tokio-test = "0.4.3"
+mockall = "0.12.1"
+wiremock = "0.5.22"
+proptest = "1.4"
+test-log = "0.2.14"
+env_logger = "0.11.1"
