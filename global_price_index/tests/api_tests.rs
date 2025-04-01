@@ -48,3 +48,40 @@ async fn test_global_price_endpoint() {
     }
 
 }
+
+#[actix_web::test]
+async fn test_index_endpoint() {
+    let app = test::init_service(
+        actix_web::App::new()
+            .route("/", web::get().to(global_price_index::api::index))
+    ).await;
+
+    let req = test::TestRequest::get().uri("/").to_request();
+    let resp = test::call_service(&app, req).await;
+
+    assert!(resp.status().is_success());
+
+}
+
+#[actix_web::test]
+async fn test_error_handling() {
+    let binance = Arc::new(BinanceExchange::new().await.expect("Failed to create Binance exchange"));
+    let kraken = Arc::new(KrakenExchange::new().await.expect("Failed to create Kraken exchange"));
+    let huobi = Arc::new(HuobiExchange::new().await.expect("Failed to create Huobi exchange"));
+
+    let app = test::init_service(
+        actix_web::App::new()
+            .app_data(web::Data::new(global_price_index::api::AppState {
+                binance,
+                kraken,
+                huobi,
+            }))
+            .route("/global-price", web::get().to(global_price_index::api::get_global_price))
+    ).await;
+
+    let req = test::TestRequest::get().uri("/invalid-path").to_request();
+    let resp = test::call_service(&app, req).await;
+
+    assert!(resp.status().is_client_error());
+
+}

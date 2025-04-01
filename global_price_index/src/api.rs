@@ -70,7 +70,7 @@ pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(global_index)
 }
 
-async fn index() -> impl Responder {
+pub async fn index() -> impl Responder {
     let frontend_dir = env::var("FRONTEND_DIR").unwrap_or_else(|_| "frontend".to_string());
     let templates_dir = env::var("TEMPLATES_DIR").unwrap_or_else(|_| "templates".to_string());
     let index_html = env::var("INDEX_HTML").unwrap_or_else(|_| "index.html".to_string());
