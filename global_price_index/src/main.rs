@@ -1,12 +1,11 @@
-// Actix server setup, task spawning
+//! Global BTC/USDT Price Index API Binary
+//!
+//! This is the main entry point for the Global BTC/USDT Price Index API server.
 
-mod api;
-mod error;
-mod exchanges;
-mod models;
+use global_price_index::start_server;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Stating Global BTC/USDT Price Index API ...");
-    api::start_server().await
+    println!("Starting Global BTC/USDT Price Index API ...");
+    start_server().await
 }

@@ -132,7 +132,6 @@ impl BinanceExchange {
     ) {
         let mut last_pong = SystemTime::now();
         let mut ping_interval = tokio::time::interval(get_ping_interval());
-        let mut message_count = 0;
 
         println!("WebSocket message handler started");
         loop {
@@ -140,8 +139,6 @@ impl BinanceExchange {
                 Some(message) = read.next() => {
                     match message {
                         Ok(Message::Text(text)) => {
-                            message_count += 1;
-                            println!("Received WebSocket message #{}", message_count);
                             if let Ok(update) = serde_json::from_str::<BinanceOrderBook>(&text) {
                                 let mut order_book = order_book.write().await;
                                 // Only update if we have valid data and it's different from current
