@@ -1,13 +1,13 @@
 {
-  "name": "global-price-index",
+  "name": "global-price-index-frontend",
   "version": "1.0.0",
-  "description": "BTC/USDT Global Price Index",
+  "description": "BTC/USDT Global Price Index Frontend",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "start": "npm run build && cargo run",
-    "format": "prettier --write \"static/js/**/*.ts\"",
-    "lint": "eslint \"static/js/**/*.ts\"",
+    "start": "npm run build",
+    "format": "prettier --write \"static/**/*.ts\"",
+    "lint": "eslint \"static/**/*.ts\"",
     "test": "jest"
   },
   "dependencies": {

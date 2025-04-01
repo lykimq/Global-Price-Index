@@ -5,11 +5,12 @@ BIN_NAME := global_price_index
 CARGO := cargo
 NPM := npm
 TSC := npx tsc
+FRONTEND_DIR := frontend
 
 # Build the project
 build:
 	@echo "Building TypeScript..."
-	@$(NPM) run build
+	@cd $(FRONTEND_DIR) && $(NPM) run build
 	@echo "Building Rust project..."
 	@$(CARGO) build --release
 
@@ -21,35 +22,35 @@ run:
 # Format the project
 format:
 	@echo "Formatting TypeScript..."
-	@$(NPM) run format
+	@cd $(FRONTEND_DIR) && $(NPM) run format
 	@echo "Formatting Rust..."
 	@$(CARGO) fmt
 
 # Check for linting
 lint:
 	@echo "Linting TypeScript..."
-	@$(NPM) run lint
+	@cd $(FRONTEND_DIR) && $(NPM) run lint
 	@echo "Linting Rust..."
 	@$(CARGO) clippy --all-targets --allow-features -- -D warnings
 
 # Run tests
 test:
 	@echo "Running TypeScript tests..."
-	@$(NPM) run test
+	@cd $(FRONTEND_DIR) && $(NPM) run test
 	@echo "Running Rust tests..."
 	@$(CARGO) test
 
 # Clean the project
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -rf node_modules
-	@rm -rf static/js/*.js
+	@cd $(FRONTEND_DIR) && rm -rf node_modules
+	@cd $(FRONTEND_DIR) && rm -rf static/js/*.js
 	@$(CARGO) clean
 
 # Watch for changes and rebuild
 watch:
 	@echo "Watching for changes..."
-	@$(NPM) run watch
+	@cd $(FRONTEND_DIR) && $(NPM) run watch
 
 .PHONY: all build clean install run format lint test watch help
 
@@ -59,7 +60,7 @@ all: install build
 # Install dependencies
 install:
 	@echo "Installing dependencies..."
-	@$(NPM) install
+	@cd $(FRONTEND_DIR) && $(NPM) install
 	@$(CARGO) build
 
 # Help command
