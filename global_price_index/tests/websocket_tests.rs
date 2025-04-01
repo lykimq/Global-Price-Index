@@ -173,3 +173,22 @@ async fn test_binance_websocket_ping_pong() {
     assert!(received_pong, "Did not receive Pong response within 30 seconds");
     println!("WebSocket ping-pong test passed");
 }
+
+#[tokio::test]
+async fn test_binance_websocket_update_frequency() {
+    // Create a new Binance exchange instance
+    let exchange = BinanceExchange::new().await.expect("Failed to create Binance exchange");
+
+    // Get initial orderbook
+    let initial_orderbook = exchange.fetch_order_book().await.expect("Failed to fetch initial orderbook");
+
+    // Wait for updates
+    sleep(Duration::from_secs(2)).await;
+
+    // Get updated orderbook
+    let updated_orderbook = exchange.fetch_order_book().await.expect("Failed to fetch updated orderbook");
+
+    // Verify that we receive updates within a reasonable timeframe
+    let update_time = updated_orderbook.timestamp.duration_since(initial_orderbook.timestamp).unwrap();
+    assert!(update_time.as_secs() <= 5, "Orderbook not updated within 5 seconds");
+}
