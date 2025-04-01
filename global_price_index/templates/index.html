@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC/USDT Global Price Index</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .price-up { color: #10B981; }
+        .price-down { color: #EF4444; }
+        .refresh-animation { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">BTC/USDT Global Price Index</h1>
+            <p class="text-gray-600">Real-time price data from multiple exchanges</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Global Price Card -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Global Price</h2>
+                <div class="text-3xl font-bold" id="global-price">Loading...</div>
+                <div class="text-sm text-gray-500 mt-2" id="global-timestamp"></div>
+            </div>
+
+            <!-- Exchange Prices -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Exchange Prices</h2>
+                <div class="space-y-4" id="exchange-prices">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Card -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Status</h2>
+                <div class="space-y-2">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                        <span class="text-gray-600">Last Update: <span id="last-update">-</span></span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                        <span class="text-gray-600">Refresh Rate: Every 5 seconds</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastPrices = {};
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(price);
+        }
+
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp).toLocaleTimeString();
+        }
+
+        function updatePrices() {
+            fetch('/global-price')
+                .then(response => response.json())
+                .then(data => {
+                    // Update global price
+                    const globalPriceEl = document.getElementById('global-price');
+                    const globalTimestampEl = document.getElementById('global-timestamp');
+
+                    if (lastPrices.global !== data.price) {
+                        globalPriceEl.className = `text-3xl font-bold ${data.price > lastPrices.global ? 'price-up' : 'price-down'}`;
+                    }
+                    globalPriceEl.textContent = `$${formatPrice(data.price)}`;
+                    globalTimestampEl.textContent = `Updated: ${formatTimestamp(data.timestamp)}`;
+
+                    // Update exchange prices
+                    const exchangePricesEl = document.getElementById('exchange-prices');
+                    exchangePricesEl.innerHTML = data.exchange_prices.map(exchange => {
+                        const priceClass = lastPrices[exchange.exchange] !== exchange.mid_price
+                            ? (exchange.mid_price > lastPrices[exchange.exchange] ? 'price-up' : 'price-down')
+                            : '';
+                        lastPrices[exchange.exchange] = exchange.mid_price;
+
+                        return `
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">${exchange.exchange}</span>
+                                <span class="font-semibold ${priceClass}">$${formatPrice(exchange.mid_price)}</span>
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Update last update time
+                    document.getElementById('last-update').textContent = formatTimestamp(data.timestamp);
+                })
+                .catch(error => console.error('Error fetching prices:', error));
+        }
+
+        // Initial update
+        updatePrices();
+
+        // Update every 5 seconds
+        setInterval(updatePrices, 5000);
+    </script>
+</body>
+</html>

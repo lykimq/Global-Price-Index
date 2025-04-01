@@ -1,0 +1,11 @@
+{
+  "name": "global-price-index",
+  "version": "1.0.0",
+  "description": "BTC/USDT Global Price Index",
+  "scripts": {
+    "start": "cargo run"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}
