@@ -58,14 +58,14 @@ impl OrderBook {
             return None;
         }
 
-        // Parse the best bid and ask prices
+        // Get the best bid (highest price) and best ask (lowest price)
         let best_bid = match self.bids[0][0].parse::<f64>() {
-            Ok(price) if price > 0.0 => price,
+            Ok(p) if p > 0.0 => p,
             _ => return None,
         };
 
         let best_ask = match self.asks[0][0].parse::<f64>() {
-            Ok(price) if price > 0.0 => price,
+            Ok(p) if p > 0.0 => p,
             _ => return None,
         };
 
@@ -74,7 +74,11 @@ impl OrderBook {
             return None;
         }
 
-        Some((best_bid + best_ask) / 2.0)
+        // Calculate mid price as average of best bid and best ask
+        let mid_price = (best_bid + best_ask) / 2.0;
+
+        // Round to 2 decimal places
+        Some((mid_price * 100.0).round() / 100.0)
     }
 }
 
