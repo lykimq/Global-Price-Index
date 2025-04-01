@@ -1,6 +1,10 @@
 use global_price_index::exchanges::{binance::BinanceExchange, Exchange};
 use tokio::time::{sleep, Duration};
 use std::time::SystemTime;
+use tokio_tungstenite::{connect_async, tungstenite::Message};
+use futures::{StreamExt, SinkExt};
+use serde_json;
+
 
 #[tokio::test]
 async fn test_binance_websocket_connection() {
@@ -97,4 +101,48 @@ async fn test_binance_websocket_reconnect() {
         "Order book timestamp is too old: {:?}", timestamp_age);
 
     println!("Order book validation passed");
+}
+
+#[tokio::test]
+async fn test_binance_websocket_message_format() {
+    let ws_url = std::env::var("BINANCE_WS_URL")
+        .unwrap_or_else(|_| "wss://stream.binance.com:9443/ws".to_string());
+
+    let url = url::Url::parse(&ws_url).unwrap();
+    println!("Connecting to WebSocket URL: {}", ws_url);
+
+    let (mut ws_stream, _) = connect_async(url).await.expect("Failed to connect to WebSocket");
+
+    // Subscribe to the order book stream
+    let subscribe_msg = serde_json::json!({
+        "method": "SUBSCRIBE",
+        "params": ["btcusdt@depth@100ms"],
+        "id": 1
+    });
+    ws_stream.send(Message::Text(subscribe_msg.to_string())).await
+        .expect("Failed to send subscription message");
+
+    // Wait for subscription confirmation
+    let confirm_msg = ws_stream.next().await.expect("Failed to receive subscription confirmation").unwrap();
+    match confirm_msg {
+        Message::Text(text) => {
+            println!("Received subscription confirmation: {}", text);
+            assert!(text.contains("\"id\":1"), "Unexpected subscription confirmation");
+        }
+        _ => panic!("Unexpected subscription confirmation format"),
+    }
+
+    // Wait for the order book data
+    let message = ws_stream.next().await.expect("Failed to receive order book data").unwrap();
+
+    match message {
+        Message::Text(text) => {
+            println!("Received order book data: {}", text);
+            assert!(text.contains("\"b\""), "Missing bids in message");
+            assert!(text.contains("\"a\""), "Missing asks in message");
+            assert!(text.contains("\"e\":\"depthUpdate\""), "Not a depth update message");
+            assert!(text.contains("\"s\":\"BTCUSDT\""), "Wrong trading pair");
+        }
+        _ => panic!("Unexpected message format"),
+    }
 }
