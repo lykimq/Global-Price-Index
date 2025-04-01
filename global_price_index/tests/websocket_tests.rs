@@ -146,3 +146,30 @@ async fn test_binance_websocket_message_format() {
         _ => panic!("Unexpected message format"),
     }
 }
+
+#[tokio::test]
+async fn test_binance_websocket_ping_pong() {
+    let ws_url = std::env::var("BINANCE_WS_URL")
+        .unwrap_or_else(|_| "wss://stream.binance.com:9443/ws".to_string());
+
+    let url = url::Url::parse(&ws_url).unwrap();
+    println!("Connecting to WebSocket URL: {}", ws_url);
+
+    let (mut ws_stream, _) = connect_async(url).await.expect("Failed to connect to WebSocket");
+
+    let start_time = SystemTime::now();
+    let mut received_pong = false;
+
+    // Send a ping message
+    ws_stream.send(Message::Ping(vec![])).await.expect("Failed to send ping");
+
+    while start_time.elapsed().unwrap() < Duration::from_secs(30) {
+        if let Ok(Message::Pong(_)) = ws_stream.next().await.expect("Failed to receive message") {
+            received_pong = true;
+            break;
+        }
+    }
+
+    assert!(received_pong, "Did not receive Pong response within 30 seconds");
+    println!("WebSocket ping-pong test passed");
+}
