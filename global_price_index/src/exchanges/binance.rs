@@ -156,8 +156,9 @@ impl BinanceExchange {
                                             current_best_bid, current_best_ask, new_best_bid, new_best_ask);
                                         order_book.bids = update.bids;
                                         order_book.asks = update.asks;
-                                        order_book.timestamp = SystemTime::now();
                                     }
+                                    // Always update the timestamp when we receive valid data
+                                    order_book.timestamp = SystemTime::now();
                                 }
                             }
                         }
