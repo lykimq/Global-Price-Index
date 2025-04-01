@@ -132,19 +132,32 @@ impl BinanceExchange {
     ) {
         let mut last_pong = SystemTime::now();
         let mut ping_interval = tokio::time::interval(get_ping_interval());
+        let mut message_count = 0;
 
+        println!("WebSocket message handler started");
         loop {
             tokio::select! {
                 Some(message) = read.next() => {
                     match message {
                         Ok(Message::Text(text)) => {
+                            message_count += 1;
+                            println!("Received WebSocket message #{}", message_count);
                             if let Ok(update) = serde_json::from_str::<BinanceOrderBook>(&text) {
                                 let mut order_book = order_book.write().await;
-                                // Only update if we have valid data
+                                // Only update if we have valid data and it's different from current
                                 if !update.bids.is_empty() && !update.asks.is_empty() {
-                                    order_book.bids = update.bids;
-                                    order_book.asks = update.asks;
-                                    order_book.timestamp = SystemTime::now();
+                                    let current_best_bid = order_book.bids[0][0].parse::<f64>().unwrap_or(0.0);
+                                    let current_best_ask = order_book.asks[0][0].parse::<f64>().unwrap_or(0.0);
+                                    let new_best_bid = update.bids[0][0].parse::<f64>().unwrap_or(0.0);
+                                    let new_best_ask = update.asks[0][0].parse::<f64>().unwrap_or(0.0);
+
+                                    if new_best_bid != current_best_bid || new_best_ask != current_best_ask {
+                                        println!("Updating order book - Old: {}/{} New: {}/{}",
+                                            current_best_bid, current_best_ask, new_best_bid, new_best_ask);
+                                        order_book.bids = update.bids;
+                                        order_book.asks = update.asks;
+                                        order_book.timestamp = SystemTime::now();
+                                    }
                                 }
                             }
                         }
@@ -161,7 +174,7 @@ impl BinanceExchange {
                         }
                         Ok(Message::Pong(_)) => {
                             last_pong = SystemTime::now();
-                            eprintln!("Received pong, connection is healthy");
+                            println!("Received pong, connection is healthy");
                         }
                         Err(e) => {
                             eprintln!("WebSocket error: {}", e);
