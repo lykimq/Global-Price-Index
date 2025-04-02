@@ -38,16 +38,16 @@ mod timestamp_serde {
         let timestamp = time
             .duration_since(UNIX_EPOCH)
             .map_err(|_| serde::ser::Error::custom("Invalid timestamp"))?
-            .as_secs_f64();
-        serializer.serialize_f64(timestamp)
+            .as_millis();
+        serializer.serialize_i64(timestamp as i64)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<SystemTime, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let timestamp = f64::deserialize(deserializer)?;
-        let duration = std::time::Duration::from_secs_f64(timestamp);
+        let timestamp = i64::deserialize(deserializer)?;
+        let duration = std::time::Duration::from_millis(timestamp as u64);
         Ok(UNIX_EPOCH + duration)
     }
 }
