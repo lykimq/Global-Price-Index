@@ -13,6 +13,13 @@ proptest! {
         .. ProptestConfig::default()
     })]
 
+    /// Tests fundamental properties of the mid-price calculation across
+    /// a wide range of randomly generated bid and ask prices and quantities.
+    ///
+    /// This test verifies:
+    /// 1. The mid price is always between the bid and ask prices
+    /// 2. The mid price is exactly the average of bid and ask prices (within rounding precision)
+    /// 3. The rounding precision is consistent with our expected 2 decimal places
     #[test]
     fn test_mid_price_properties(
         // Generate random values for bid and ask prices and quantities
@@ -50,6 +57,12 @@ proptest! {
         assert!(absolute_diff <= 0.01);
     }
 
+    /// Tests that an order book with an empty side (either bids or asks)
+    /// correctly returns None for mid-price calculation.
+    ///
+    /// This test verifies:
+    /// 1. When bids are empty (but asks exist), no mid price is returned
+    /// 2. When asks are empty (but bids exist), no mid price is returned
     #[test]
     fn test_empty_order_book_property(
         // Generate a random boolean to decide whether to have empty bids or empty asks
@@ -87,6 +100,12 @@ proptest! {
         assert!(order_book.calculate_mid_price().is_none(), "Order book with empty side should not have a mid price");
     }
 
+    /// Tests that an order book with non-positive prices (zero or negative)
+    /// correctly returns None for mid-price calculation.
+    ///
+    /// This test verifies:
+    /// 1. When bid price is non-positive, no mid price is returned
+    /// 2. When ask price is non-positive, no mid price is returned
     #[test]
     fn test_non_positive_prices_property(
         // Generate a random boolean to decide whether to have non-positive bid or ask
@@ -119,6 +138,13 @@ proptest! {
         assert!(order_book.calculate_mid_price().is_none(), "Order book with non-positive prices should not have a mid price");
     }
 
+    /// Tests structural invariants of the order book to ensure consistent
+    /// and valid data representation.
+    ///
+    /// This test verifies:
+    /// 1. The best bid is always less than the best ask (valid spread)
+    /// 2. Bids are maintained in descending order (highest price first)
+    /// 3. Asks are maintained in ascending order (lowest price first)
     #[test]
     fn test_order_book_validation(
         prices in prop::collection::vec(

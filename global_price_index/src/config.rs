@@ -49,6 +49,11 @@ pub struct ExchangeConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct PriceWeighting {
+    pub decay_factor: f64,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Exchange {
     pub binance: BinanceConfig,
     pub kraken: KrakenConfig,
@@ -61,6 +66,7 @@ pub struct Settings {
     pub server: Server,
     pub frontend: Frontend,
     pub exchange: Exchange,
+    pub price_weighting: PriceWeighting,
 }
 
 impl Settings {
@@ -114,6 +120,9 @@ impl Settings {
                             ping_retry_count: 3,
                         },
                     },
+                    price_weighting: PriceWeighting {
+                        decay_factor: 300.0, // 5 minutes default
+                    },
                 })
             }
         }
@@ -166,6 +175,10 @@ pub fn get_max_reconnect_delay() -> Duration {
 
 pub fn get_ping_retry_count() -> u32 {
     SETTINGS.read().unwrap().exchange.config.ping_retry_count
+}
+
+pub fn get_decay_factor() -> f64 {
+    SETTINGS.read().unwrap().price_weighting.decay_factor
 }
 
 pub fn get_server_addr() -> String {

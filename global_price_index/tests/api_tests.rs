@@ -6,6 +6,15 @@ use global_price_index::{
 use std::sync::Arc;
 use std::time::SystemTime;
 
+/// Tests the main global price endpoint to ensure it correctly
+/// aggregates price data from all exchanges and returns a valid response.
+///
+/// This test verifies:
+/// 1. The endpoint returns a successful HTTP status
+/// 2. The response body contains a valid GlobalPriceIndex JSON
+/// 3. The global price is positive and reasonable
+/// 4. The timestamp is current
+/// 5. Exchange prices are included and valid
 #[actix_web::test]
 async fn test_global_price_endpoint() {
     // Initialize exchanges
@@ -63,6 +72,10 @@ async fn test_global_price_endpoint() {
     }
 }
 
+/// Tests the index endpoint (root path) to ensure it returns a successful response.
+///
+/// This test verifies:
+/// 1. The root endpoint returns a successful HTTP status
 #[actix_web::test]
 async fn test_index_endpoint() {
     let app = test::init_service(
@@ -76,6 +89,11 @@ async fn test_index_endpoint() {
     assert!(resp.status().is_success());
 }
 
+/// Tests that the API properly handles error cases, specifically
+/// responding with appropriate error status codes for invalid paths.
+///
+/// This test verifies:
+/// 1. The API returns a client error (4xx) status code for invalid paths
 #[actix_web::test]
 async fn test_error_handling() {
     let binance = Arc::new(

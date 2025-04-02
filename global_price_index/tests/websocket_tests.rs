@@ -8,6 +8,18 @@ use std::time::SystemTime;
 use tokio::time::{sleep, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
+/// Tests that the Binance WebSocket connection works correctly
+/// and that the order book is properly updated with WebSocket data.
+///
+/// This test verifies:
+/// 1. A connection to Binance WebSocket can be established
+/// 2. The initial order book snapshot is fetched
+/// 3. WebSocket updates are received and processed
+/// 4. The updated order book contains valid data
+/// 5. The spread is valid (best ask > best bid)
+///
+/// This is a long-running integration test that connects to the real Binance WebSocket API.
+/// It waits 30 seconds for WebSocket updates to ensure the connection is stable.
 #[tokio::test]
 async fn test_binance_websocket_connection() {
     println!("Starting Binance WebSocket test...");
@@ -88,6 +100,15 @@ async fn test_binance_websocket_connection() {
     println!("Order book validation passed");
 }
 
+/// Tests that the Binance WebSocket connection can recover from disconnections
+/// and continue to provide valid order book data.
+///
+/// This test verifies:
+/// 1. The WebSocket connection can be established
+/// 2. After a simulated disconnection period, data is still available
+/// 3. The reconnected order book contains valid data
+/// 4. Specific data integrity checks pass (valid prices, quantities)
+/// 5. The order book timestamp is recent (within 5 minutes)
 #[tokio::test]
 async fn test_binance_websocket_reconnect() {
     println!("Starting Binance WebSocket reconnect test...");
@@ -190,7 +211,7 @@ async fn test_binance_websocket_reconnect() {
         .duration_since(reconnect_order_book.timestamp)
         .expect("Failed to calculate timestamp age");
     assert!(
-        timestamp_age < Duration::from_secs(300),
+        timestamp_age < Duration::from_secs(300), // 5 minutes
         "Order book timestamp is too old: {:?}",
         timestamp_age
     );
@@ -198,6 +219,17 @@ async fn test_binance_websocket_reconnect() {
     println!("Order book validation passed");
 }
 
+/// Tests that the Binance WebSocket message format matches the expected structure
+/// and contains required fields for processing order book updates.
+///
+/// This test verifies:
+/// 1. Direct WebSocket connection can be established to Binance
+/// 2. The subscription process works correctly
+/// 3. The received message format contains all required fields:
+///    - "b" (bids)
+///    - "a" (asks)
+///    - "e":"depthUpdate" (event type)
+///    - "s":"BTCUSDT" (symbol)
 #[tokio::test]
 async fn test_binance_websocket_message_format() {
     let ws_url = get_binance_ws_url();
@@ -265,6 +297,13 @@ async fn test_binance_websocket_message_format() {
     }
 }
 
+/// Tests that the Binance WebSocket connection properly supports
+/// the WebSocket ping/pong health-check mechanism.
+///
+/// This test verifies:
+/// 1. Direct WebSocket connection can be established
+/// 2. Ping messages can be sent to the server
+/// 3. Pong responses are received within a reasonable timeframe (30 seconds)
 #[tokio::test]
 async fn test_binance_websocket_ping_pong() {
     let ws_url = get_binance_ws_url();
@@ -303,6 +342,14 @@ async fn test_binance_websocket_ping_pong() {
     println!("WebSocket ping-pong test passed");
 }
 
+/// Tests that the Binance WebSocket provides frequent updates to the order book,
+/// ensuring real-time price data is available.
+///
+/// This test verifies:
+/// 1. The initial order book can be fetched
+/// 2. After a short wait (2 seconds), updates are received
+/// 3. The update timestamp differs from the initial timestamp
+/// 4. Updates occur within a reasonable timeframe (5 seconds)
 #[tokio::test]
 async fn test_binance_websocket_update_frequency() {
     // Create a new Binance exchange instance

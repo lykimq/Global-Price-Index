@@ -27,3 +27,14 @@ initial_reconnect_delay = 1 # 1 second
 ping_interval = 30 # 30 seconds
 max_reconnect_delay = 300 # 5 minutes
 ping_retry_count = 3 # 3 retries
+
+# Price Weighting Configuration
+[price_weighting]
+# Controls how quickly older prices lose influence (in seconds)
+# Larger value = slower decay, smaller value = faster decay
+# Examples with decay_factor = 300:
+# - Current price: 100% influence
+# - 5-minute-old price: ~37% influence
+# - 10-minute-old price: ~14% influence
+# - 20-minute-old price: ~2% influence
+decay_factor = 300 # 5 minutes

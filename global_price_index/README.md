@@ -38,8 +38,21 @@ mid_price = (best_bid + best_ask)/2
 ```
 - Validation: Skips invalid data (empty bids/asks).
 
+- Time-based Weighting System:
+    + Advanced time-based weighting for Global Price Index calculation.
+    + Exponential decay formula: `weight = e^(-time_diff/decay_factor)`.
+    + More recent prices have higher weights (greater influence on the global price).
+    + Configurable decay factor (default: 5 minutes) determines how quickly older prices lose influence.
+    + Example weight values:
+      * Current prices: 100% influence
+      * 5-minute-old prices: ~37% influence
+      * 10-minute-old prices: ~14% influence
+      * 20-minute-old prices: ~2% influence
+    + Ensures the global index is more responsive to recent market changes.
+    + Helps mitigate issues with delayed data from slower exchanges.
+
 - Global Index and Fault Tolerance:
-    + Average of valid mid-prices across functioning exchanges.
+    + Weighted average of valid mid-prices across functioning exchanges.
     + Graceful handling of partial exchange failures:
         * If any single exchange fails, the system continues with data from remaining exchanges.
         * If two exchanges fail, the index is based on the single remaining exchange.
@@ -56,6 +69,7 @@ mid_price = (best_bid + best_ask)/2
     + WebSocket tests: Test WebSocket connection, reconnection, message format, and ping/pong mechanisms.
     + Integration tests: Test API endpoints and end-to-end functionality.
     + Property tests: Test data model properties and invariants using proptest framework.
+    + Time-based weighting tests: Test weighted price calculations with timestamps of different ages, equal timestamps, single prices, invalid prices, very old prices, and verify the exponential decay formula implementation.
 
 ## Frontend Access
 
@@ -110,8 +124,19 @@ The application uses a TOML-based configuration system for better type safety an
 - **Frontend**: Directory paths for static assets and templates
 - **Exchange Endpoints**: URLs for Binance, Kraken, and Huobi
 - **Exchange Config**: Connection parameters (reconnect delays, ping intervals, retry counts)
+- **Price Weighting**: Time-based weighting configuration (decay factor in seconds)
 
 Configuration is loaded at startup from the `config.toml` file and accessed through the `config` module, which provides type-safe accessor methods for all settings.
+
+### Sample Configuration
+
+```toml
+# Price Weighting Configuration
+[price_weighting]
+# Controls how quickly older prices lose influence (in seconds)
+# Larger value = slower decay, smaller value = faster decay
+decay_factor = 300  # 5 minutes
+```
 
 ## Security
 
