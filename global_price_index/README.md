@@ -38,6 +38,18 @@ mid_price = (best_bid + best_ask)/2
     + Integration tests: Test API endpoints and end-to-end functionality.
     + Property tests: Test data model properties and invariants using proptest framework.
 
+## Frontend Access
+
+The web interface for the Global Price Index is accessible at:
+```
+http://localhost:8080
+```
+
+**Note on HTTP vs HTTPS:**
+- The service currently uses HTTP for its local web interface
+- This is appropriate for development and internal network usage
+- For production deployment, configure with TLS/HTTPS using a reverse proxy like Nginx or an application load balancer
+
 ## API Endpoints
 
 **Global Price Index**
@@ -81,9 +93,15 @@ Notes:
 The current implementation includes several security features:
 
 - **Secure Communication**:
-  + Uses HTTPS for REST API calls to exchanges
-  + Uses WSS (WebSocket Secure) for real-time data streams
-  + Default TLS verification enabled in HTTP and WebSocket clients
+  + Uses HTTPS for outbound REST API calls to exchanges (external communication)
+  + Uses WSS (WebSocket Secure) for real-time data streams from exchanges
+  + Default TLS verification enabled in HTTP and WebSocket clients for all external APIs
+  + Note: Internal web server uses HTTP by default and should be placed behind a TLS-terminating proxy for production
+
+- **TLS Verification Explained**:
+  + For HTTP clients: The `reqwest` client verifies TLS certificates by default, ensuring connections to exchanges are secure and properly authenticated
+  + For WebSocket clients: The `tokio_tungstenite` library with the `native-tls` feature validates server certificates during WebSocket connection establishment
+  + This prevents man-in-the-middle attacks when communicating with exchange APIs
 
 - **Input Validation**:
   + Validates all price data before processing (non-empty, positive values)
