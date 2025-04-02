@@ -19,19 +19,38 @@ This service computes a global BTC/USDT price index by:
 
 ## Features
 
-- Real-time Data:
-    + Binance: WebSocket stream with snapshot recovery.
+- Real-time Data Processing:
+    + Binance: WebSocket stream with snapshot recovery and incremental updates.
+    + Incremental order book updates that merge changes rather than replacing the entire book.
+    + Smart price level management: new orders added, existing orders updated, orders with zero quantity removed.
+    + Efficient sorting of bids (highest first) and asks (lowest first) with safe floating-point comparisons.
     + Kraken/Huobi: REST polling (configurable interval).
+
+- Connection Resilience:
+    + Robust WebSocket connection with unlimited reconnection attempts and exponential backoff.
+    + Maximum reconnection delay cap for better long-term stability.
+    + Ping/pong health checks with configurable retry mechanism.
+    + Proper error handling and recovery from temporary failures.
+
 - Mid-Price Calculation:
 ```
 mid_price = (best_bid + best_ask)/2
 ```
-Validation: Skips invalid data (empty bids/asks).
-- Global Index:
-    + Average of valid mid-prices (ignores failed exchanges).
-- Fault Tolerance:
-    + Retries for failed API calls (exponential backoff).
-    + WebSocket reconnection with exponential backoff.
+- Validation: Skips invalid data (empty bids/asks).
+
+- Global Index and Fault Tolerance:
+    + Average of valid mid-prices across functioning exchanges.
+    + Graceful handling of partial exchange failures:
+        * If any single exchange fails, the system continues with data from remaining exchanges.
+        * If two exchanges fail, the index is based on the single remaining exchange.
+        * Only returns an error (503) when all exchanges fail.
+    + Automatic recovery when exchanges come back online.
+
+- Configuration Management:
+    + TOML-based configuration system with typed validation.
+    + Centralized settings management via lazy-initialized global instance.
+    + Default values for all settings ensure operation even without config file.
+
 - Testing:
     + Unit tests: Test order book parsing, mid-price calculation, and data validation.
     + WebSocket tests: Test WebSocket connection, reconnection, message format, and ping/pong mechanisms.
@@ -59,34 +78,40 @@ GET /global-price
 ```
 
 **Response**
-```
+```json
 {
-    "price": 84640.55333333333,
-    "timestamp":1743583727.3289757,
-    "exchange_prices":
-    [
+    "price": 84640.55,
+    "timestamp": 1743583727.328,
+    "exchange_prices": [
         {
             "exchange": "Binance",
-            "mid_price":84642.0,
-            "timestamp":1743583726.9247916},
-        {
-            "exchange":"Kraken",
-            "mid_price":84648.15,
-            "timestamp":1743583726.9877129
+            "mid_price": 84642.0,
+            "timestamp": 1743583726.924
         },
         {
-            "exchange":"Huobi",
-            "mid_price":84631.51,
-            "timestamp":1743583727.3289661
+            "exchange": "Kraken",
+            "mid_price": 84648.15,
+            "timestamp": 1743583726.987
+        },
+        {
+            "exchange": "Huobi",
+            "mid_price": 84631.51,
+            "timestamp": 1743583727.328
         }
     ]
 }
 ```
-Notes:
-- **Fault Tolerance:** The service gracefully handles exchange failures:
-  + If any single exchange fails (e.g., Huobi, Binance, or Kraken), the global price index uses the average of data from the remaining functioning exchanges.
-  + If two exchanges fail, the global price index uses data from the single remaining exchange.
-  + If all exchanges fail, the API returns a 503 Service Unavailable response with an error message.
+
+## Configuration
+
+The application uses a TOML-based configuration system for better type safety and flexibility. Key configuration sections include:
+
+- **Server**: Host and port settings
+- **Frontend**: Directory paths for static assets and templates
+- **Exchange Endpoints**: URLs for Binance, Kraken, and Huobi
+- **Exchange Config**: Connection parameters (reconnect delays, ping intervals, retry counts)
+
+Configuration is loaded at startup from the `config.toml` file and accessed through the `config` module, which provides type-safe accessor methods for all settings.
 
 ## Security
 
@@ -97,11 +122,6 @@ The current implementation includes several security features:
   + Uses WSS (WebSocket Secure) for real-time data streams from exchanges
   + Default TLS verification enabled in HTTP and WebSocket clients for all external APIs
   + Note: Internal web server uses HTTP by default and should be placed behind a TLS-terminating proxy for production
-
-- **TLS Verification Explained**:
-  + For HTTP clients: The `reqwest` client verifies TLS certificates by default, ensuring connections to exchanges are secure and properly authenticated
-  + For WebSocket clients: The `tokio_tungstenite` library with the `native-tls` feature validates server certificates during WebSocket connection establishment
-  + This prevents man-in-the-middle attacks when communicating with exchange APIs
 
 - **Input Validation**:
   + Validates all price data before processing (non-empty, positive values)
@@ -117,6 +137,7 @@ The current implementation includes several security features:
   + Configurable timeouts for HTTP requests (5 seconds default)
   + Ping/pong mechanisms to verify WebSocket connection health
   + Automatic reconnection with backoff to prevent overwhelming servers
+  + Retry mechanism for WebSocket ping/pong messages
 
 - **Data Integrity**:
   + Thread-safe access to shared state using `Arc<RwLock<>>`
@@ -143,9 +164,10 @@ cargo build --release
 make install
 ```
 
-3. Configure environment variables (`.env`):
+3. Configure the application:
 ```bash
-cp .env.example .env
+cp config.toml.example config.toml
+# Edit config.toml with your settings
 ```
 
 ## Running
