@@ -61,19 +61,19 @@ proptest! {
 
         for (price, quantity) in prices {
             if price < 50000.0 {
-                bids.push([price.to_string(), quantity.to_string()]);
+                bids.push(Order { price, quantity });
             } else {
-                asks.push([price.to_string(), quantity.to_string()]);
+                asks.push(Order { price, quantity });
             }
         }
 
         // Sort bids in descending order, asks in ascending order
-        bids.sort_by(|a, b| b[0].parse::<f64>().unwrap().partial_cmp(&a[0].parse::<f64>().unwrap()).unwrap());
-        asks.sort_by(|a, b| a[0].parse::<f64>().unwrap().partial_cmp(&b[0].parse::<f64>().unwrap()).unwrap());
+        bids.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
+        asks.sort_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal));
 
         let order_book = OrderBook {
-            bids: bids.into_iter().map(|[price, quantity]| Order { price: price.parse::<f64>().unwrap(), quantity: quantity.parse::<f64>().unwrap() }).collect(),
-            asks: asks.into_iter().map(|[price, quantity]| Order { price: price.parse::<f64>().unwrap(), quantity: quantity.parse::<f64>().unwrap() }).collect(),
+            bids,
+            asks,
             timestamp: SystemTime::now(),
         };
 

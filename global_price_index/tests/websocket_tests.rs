@@ -20,8 +20,12 @@ async fn test_binance_websocket_connection() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch order book");
-    let init_best_bid = init_order_book.bids[0].price;
-    let init_best_ask = init_order_book.asks[0].price;
+
+    let init_best_bid = init_order_book.bids.first().map(|b| b.price)
+        .expect("No bids available in initial order book");
+    let init_best_ask = init_order_book.asks.first().map(|a| a.price)
+        .expect("No asks available in initial order book");
+
     println!(
         "Initial order book - Best bid: {}, Best ask: {}",
         init_best_bid, init_best_ask
@@ -29,7 +33,7 @@ async fn test_binance_websocket_connection() {
 
     // Wait for websocket updates (give enough time for updates to come in)
     println!("Waiting for WebSocket updates...");
-    sleep(Duration::from_secs(30)).await; // Increased wait time to 30 seconds
+    sleep(Duration::from_secs(30)).await; // Wait time to 30 seconds
     println!("Finished waiting for updates");
 
     // Get the updated order book
@@ -37,8 +41,12 @@ async fn test_binance_websocket_connection() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch updated order book");
-    let updated_best_bid = updated_order_book.bids[0].price;
-    let updated_best_ask = updated_order_book.asks[0].price;
+
+    let updated_best_bid = updated_order_book.bids.first().map(|b| b.price)
+        .expect("No bids available in updated order book");
+    let updated_best_ask = updated_order_book.asks.first().map(|a| a.price)
+        .expect("No asks available in updated order book");
+
     println!(
         "Updated order book - Best bid: {}, Best ask: {}",
         updated_best_bid, updated_best_ask
@@ -62,7 +70,6 @@ async fn test_binance_websocket_connection() {
         updated_best_ask
     );
 
-    // Instead of requiring price changes, verify the order book is valid
     println!("Order book validation passed");
 }
 
@@ -81,8 +88,13 @@ async fn test_binance_websocket_reconnect() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch initial order book");
-    let init_best_bid = init_order_book.bids[0].price;
-    let init_best_ask = init_order_book.asks[0].price;
+
+    // Use first().map() pattern instead of direct indexing
+    let init_best_bid = init_order_book.bids.first().map(|b| b.price)
+        .expect("No bids available in initial order book");
+    let init_best_ask = init_order_book.asks.first().map(|a| a.price)
+        .expect("No asks available in initial order book");
+
     println!(
         "Initial order book - Best bid: {}, Best ask: {}",
         init_best_bid, init_best_ask
@@ -98,8 +110,13 @@ async fn test_binance_websocket_reconnect() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch reconnected order book");
-    let reconnect_best_bid = reconnect_order_book.bids[0].price;
-    let reconnect_best_ask = reconnect_order_book.asks[0].price;
+
+    // Use first().map() pattern instead of direct indexing
+    let reconnect_best_bid = reconnect_order_book.bids.first().map(|b| b.price)
+        .expect("No bids available in reconnected order book");
+    let reconnect_best_ask = reconnect_order_book.asks.first().map(|a| a.price)
+        .expect("No asks available in reconnected order book");
+
     println!(
         "Reconnected order book - Best bid: {}, Best ask: {}",
         reconnect_best_bid, reconnect_best_ask
@@ -266,6 +283,18 @@ async fn test_binance_websocket_update_frequency() {
         .await
         .expect("Failed to fetch initial orderbook");
 
+    // Check for initial orderbook data
+    assert!(!initial_orderbook.bids.is_empty(), "Initial orderbook has no bids");
+    assert!(!initial_orderbook.asks.is_empty(), "Initial orderbook has no asks");
+
+    let initial_best_bid = initial_orderbook.bids.first().map(|b| b.price);
+    let initial_best_ask = initial_orderbook.asks.first().map(|a| a.price);
+
+    println!(
+        "Initial orderbook - Best bid: {:?}, Best ask: {:?}",
+        initial_best_bid, initial_best_ask
+    );
+
     // Wait for updates
     sleep(Duration::from_secs(2)).await;
 
@@ -274,6 +303,18 @@ async fn test_binance_websocket_update_frequency() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch updated orderbook");
+
+    // Check for updated orderbook data
+    assert!(!updated_orderbook.bids.is_empty(), "Updated orderbook has no bids");
+    assert!(!updated_orderbook.asks.is_empty(), "Updated orderbook has no asks");
+
+    let updated_best_bid = updated_orderbook.bids.first().map(|b| b.price);
+    let updated_best_ask = updated_orderbook.asks.first().map(|a| a.price);
+
+    println!(
+        "Updated orderbook - Best bid: {:?}, Best ask: {:?}",
+        updated_best_bid, updated_best_ask
+    );
 
     // Verify that we receive updates within a reasonable timeframe
     let update_time = updated_orderbook
