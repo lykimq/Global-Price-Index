@@ -1,5 +1,8 @@
 use futures::{SinkExt, StreamExt};
-use global_price_index::exchanges::{binance::BinanceExchange, Exchange};
+use global_price_index::{
+    config::get_binance_ws_url,
+    exchanges::{binance::BinanceExchange, Exchange},
+};
 use serde_json;
 use std::time::SystemTime;
 use tokio::time::{sleep, Duration};
@@ -197,11 +200,16 @@ async fn test_binance_websocket_reconnect() {
 
 #[tokio::test]
 async fn test_binance_websocket_message_format() {
-    let ws_url = std::env::var("BINANCE_WS_URL")
-        .unwrap_or_else(|_| "wss://stream.binance.com:9443/ws".to_string());
+    let ws_url = get_binance_ws_url();
 
-    let url = url::Url::parse(&ws_url).unwrap();
-    println!("Connecting to WebSocket URL: {}", ws_url);
+    // Strip the path from the websocket URL to get the base URL
+    // The ws_url might be "wss://stream.binance.com:9443/ws/btcusdt@depth"
+    // We need to extract "wss://stream.binance.com:9443/ws"
+    let base_url = ws_url.split('/').collect::<Vec<&str>>()[..3].join("/");
+    let base_ws_url = format!("{}/ws", base_url);
+
+    let url = url::Url::parse(&base_ws_url).unwrap();
+    println!("Connecting to WebSocket base URL: {}", base_ws_url);
 
     let (mut ws_stream, _) = connect_async(url)
         .await
@@ -210,7 +218,7 @@ async fn test_binance_websocket_message_format() {
     // Subscribe to the order book stream
     let subscribe_msg = serde_json::json!({
         "method": "SUBSCRIBE",
-        "params": ["btcusdt@depth@100ms"],
+        "params": ["btcusdt@depth"],
         "id": 1
     });
     ws_stream
@@ -259,11 +267,14 @@ async fn test_binance_websocket_message_format() {
 
 #[tokio::test]
 async fn test_binance_websocket_ping_pong() {
-    let ws_url = std::env::var("BINANCE_WS_URL")
-        .unwrap_or_else(|_| "wss://stream.binance.com:9443/ws".to_string());
+    let ws_url = get_binance_ws_url();
 
-    let url = url::Url::parse(&ws_url).unwrap();
-    println!("Connecting to WebSocket URL: {}", ws_url);
+    // Strip the path from the websocket URL to get the base URL
+    let base_url = ws_url.split('/').collect::<Vec<&str>>()[..3].join("/");
+    let base_ws_url = format!("{}/ws", base_url);
+
+    let url = url::Url::parse(&base_ws_url).unwrap();
+    println!("Connecting to WebSocket base URL: {}", base_ws_url);
 
     let (mut ws_stream, _) = connect_async(url)
         .await
