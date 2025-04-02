@@ -34,14 +34,6 @@ fn get_binance_rest_url() -> String {
     })
 }
 
-fn get_max_reconnect_attempts() -> u32 {
-    dotenv().ok();
-    env::var("MAX_RECONNECT_ATTEMPTS")
-        .unwrap_or_else(|_| "5".to_string())
-        .parse()
-        .unwrap_or(5)
-}
-
 fn get_initial_reconnect_delay() -> Duration {
     dotenv().ok();
     let seconds = env::var("INITIAL_RECONNECT_DELAY")
@@ -58,6 +50,23 @@ fn get_ping_interval() -> Duration {
         .parse()
         .unwrap_or(30);
     Duration::from_secs(seconds)
+}
+
+fn get_max_reconnect_delay() -> Duration {
+    dotenv().ok();
+    let seconds = env::var("MAX_RECONNECT_DELAY")
+        .unwrap_or_else(|_| "300".to_string()) // Default 5 minutes
+        .parse()
+        .unwrap_or(300);
+    Duration::from_secs(seconds)
+}
+
+fn get_ping_retry_count() -> u32 {
+    dotenv().ok();
+    env::var("PING_RETRY_COUNT")
+        .unwrap_or_else(|_| "3".to_string())
+        .parse()
+        .unwrap_or(3)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -144,6 +153,48 @@ impl BinanceExchange {
         Ok(ws_stream.split())
     }
 
+    // Function to merge updates into the order book
+    fn merge_order_book_updates(
+        existing_orders: &mut Vec<Order>,
+        updates: &[Order],
+        is_bids: bool,
+    ) {
+        // Create a combined list of all orders
+        let mut all_orders = existing_orders.clone();
+
+        // Apply updates
+        for update in updates {
+            let price = update.price;
+            let quantity = update.quantity;
+
+            // Check if this price level already exists
+            if let Some(existing_idx) = all_orders.iter().position(|order| (order.price - price).abs() < f64::EPSILON) {
+                if quantity > 0.0 {
+                    // Update existing order
+                    all_orders[existing_idx].quantity = quantity;
+                } else {
+                    // Remove the order (zero quantity indicates deletion)
+                    all_orders.remove(existing_idx);
+                }
+            } else if quantity > 0.0 {
+                // Add new order
+                all_orders.push(Order { price, quantity });
+            }
+        }
+
+        // Sort all orders
+        if is_bids {
+            // Sort bids in descending order (highest bid first)
+            all_orders.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
+        } else {
+            // Sort asks in ascending order (lowest ask first)
+            all_orders.sort_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal));
+        }
+
+        // Replace the existing orders with the updated ones
+        *existing_orders = all_orders;
+    }
+
     async fn handle_websocket_messages(
         mut read: WsStreamRead,
         mut write: WsSink,
@@ -160,19 +211,26 @@ impl BinanceExchange {
                         Ok(Message::Text(text)) => {
                             if let Ok(update) = serde_json::from_str::<BinanceOrderBook>(&text) {
                                 let mut order_book = order_book.write().await;
-                                // Only update if we have valid data and it's different from current
+                                // Only update if we have valid data
                                 if !update.bids.is_empty() && !update.asks.is_empty() {
-                                    let current_best_bid = order_book.bids[0].price;
-                                    let current_best_ask = order_book.asks[0].price;
-                                    let new_best_bid = update.bids[0].price;
-                                    let new_best_ask = update.asks[0].price;
+                                    // Get the current best bid and ask prices if available
+                                    let current_best_bid = order_book.bids.first().map(|b| b.price);
+                                    let current_best_ask = order_book.asks.first().map(|a| a.price);
 
-                                    if new_best_bid != current_best_bid || new_best_ask != current_best_ask {
-                                        println!("Updating order book - Old: {}/{} New: {}/{}",
+                                    // Merge updates rather than replacing entire book
+                                    Self::merge_order_book_updates(&mut order_book.bids, &update.bids, true);
+                                    Self::merge_order_book_updates(&mut order_book.asks, &update.asks, false);
+
+                                    // Get the new best bid and ask prices
+                                    let new_best_bid = order_book.bids.first().map(|b| b.price);
+                                    let new_best_ask = order_book.asks.first().map(|a| a.price);
+
+                                    // Log if best prices have changed
+                                    if current_best_bid != new_best_bid || current_best_ask != new_best_ask {
+                                        println!("Order book top levels updated - Old: {:?}/{:?} New: {:?}/{:?}",
                                             current_best_bid, current_best_ask, new_best_bid, new_best_ask);
-                                        order_book.bids = update.bids;
-                                        order_book.asks = update.asks;
                                     }
+
                                     // Always update the timestamp when we receive valid data
                                     order_book.timestamp = SystemTime::now();
                                 }
@@ -183,9 +241,27 @@ impl BinanceExchange {
                             break;
                         }
                         Ok(Message::Ping(payload)) => {
-                            // Respond to ping with pong
-                            if let Err(e) = write.send(Message::Pong(payload)).await {
-                                eprintln!("Failed to send pong response: {}", e);
+                            // Respond to ping with pong, with retry logic
+                            let mut retry_count = 0;
+                            let max_retries = get_ping_retry_count();
+                            while retry_count < max_retries {
+                                match write.send(Message::Pong(payload.clone())).await {
+                                    Ok(_) => {
+                                        break;
+                                    }
+                                    Err(e) => {
+                                        retry_count += 1;
+                                        eprintln!("Failed to send pong response (attempt {}/{}): {}",
+                                            retry_count, max_retries, e);
+                                        if retry_count >= max_retries {
+                                            eprintln!("Max pong retry attempts reached, reconnecting...");
+                                            break;
+                                        }
+                                        sleep(Duration::from_millis(100)).await;
+                                    }
+                                }
+                            }
+                            if retry_count >= max_retries {
                                 break;
                             }
                         }
@@ -206,9 +282,28 @@ impl BinanceExchange {
                         eprintln!("No pong received for too long, reconnecting...");
                         break;
                     }
-                    // Send a ping to keep the connection alive
-                    if let Err(e) = write.send(Message::Ping(vec![])).await {
-                        eprintln!("Failed to send ping: {}", e);
+
+                    // Send a ping to keep the connection alive, with retry logic
+                    let mut retry_count = 0;
+                    let max_retries = get_ping_retry_count();
+                    while retry_count < max_retries {
+                        match write.send(Message::Ping(vec![])).await {
+                            Ok(_) => {
+                                break;
+                            }
+                            Err(e) => {
+                                retry_count += 1;
+                                eprintln!("Failed to send ping (attempt {}/{}): {}",
+                                    retry_count, max_retries, e);
+                                if retry_count >= max_retries {
+                                    eprintln!("Max ping retry attempts reached, reconnecting...");
+                                    break;
+                                }
+                                sleep(Duration::from_millis(100)).await;
+                            }
+                        }
+                    }
+                    if retry_count >= max_retries {
                         break;
                     }
                 }
@@ -221,6 +316,7 @@ impl BinanceExchange {
         let order_book = self.order_book.clone();
         let mut reconnect_attempt = 0;
         let mut reconnect_delay = get_initial_reconnect_delay();
+        let max_reconnect_delay = get_max_reconnect_delay();
 
         tokio::spawn(async move {
             loop {
@@ -236,21 +332,17 @@ impl BinanceExchange {
                     }
                 }
 
-                // Implement exponential backoff for reconnection
-                if reconnect_attempt < get_max_reconnect_attempts() {
-                    eprintln!(
-                        "Attempting to reconnect in {} seconds (attempt {}/{})",
-                        reconnect_delay.as_secs(),
-                        reconnect_attempt + 1,
-                        get_max_reconnect_attempts()
-                    );
-                    sleep(reconnect_delay).await;
-                    reconnect_attempt += 1;
-                    reconnect_delay *= 2; // Exponential backoff
-                } else {
-                    eprintln!("Max reconnection attempts reached. Stopping reconnection attempts.");
-                    break;
-                }
+                // Implement exponential backoff for reconnection with a maximum cap
+                eprintln!(
+                    "Attempting to reconnect in {} seconds (attempt {})",
+                    reconnect_delay.as_secs(),
+                    reconnect_attempt + 1
+                );
+                sleep(reconnect_delay).await;
+                reconnect_attempt += 1;
+
+                // Double the delay with a cap at max_reconnect_delay
+                reconnect_delay = std::cmp::min(reconnect_delay * 2, max_reconnect_delay);
             }
         });
 
