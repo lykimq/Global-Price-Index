@@ -1,7 +1,7 @@
 // WebSocket client, order book sync
 use crate::config::{
-    get_binance_rest_url, get_binance_ws_url, get_initial_reconnect_delay,
-    get_max_reconnect_delay, get_ping_interval, get_ping_retry_count,
+    get_binance_rest_url, get_binance_ws_url, get_initial_reconnect_delay, get_max_reconnect_delay,
+    get_ping_interval, get_ping_retry_count,
 };
 use crate::error::{PriceIndexError, Result};
 use crate::exchanges::Exchange;

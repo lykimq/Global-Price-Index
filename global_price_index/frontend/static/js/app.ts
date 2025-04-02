@@ -35,7 +35,7 @@ class PriceDisplay {
       }
       globalPriceEl.textContent = `$${this.formatPrice(data.price)}`;
       globalTimestampEl.textContent = `Updated: ${this.formatTimestamp(
-        data.timestamp,
+        data.timestamp
       )}`;
     }
   }
@@ -58,8 +58,8 @@ class PriceDisplay {
                 <div class="flex justify-between items-center">
                     <span class="text-gray-600">${exchange.exchange}</span>
                     <span class="font-semibold ${priceClass}">$${this.formatPrice(
-                      exchange.mid_price,
-                    )}</span>
+          exchange.mid_price
+        )}</span>
                 </div>
             `;
       })
