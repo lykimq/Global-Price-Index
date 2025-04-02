@@ -62,14 +62,33 @@ fn get_ping_interval() -> Duration {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct BinanceOrderBook {
-    #[serde(rename = "bids")]
-    bids: Vec<[String; 2]>, // [price, quantity]
-
-    #[serde(rename = "asks")]
-    asks: Vec<[String; 2]>, // [price, quantity]
+    #[serde(rename = "bids", deserialize_with = "deserialize_binance_orders")]
+    bids: Vec<Order>,
+    #[serde(rename = "asks", deserialize_with = "deserialize_binance_orders")]
+    asks: Vec<Order>,
 
     #[serde(rename = "lastUpdateId")]
     last_update_id: i64, // Last update ID
+}
+
+// API Binance returns [price: String, quantity: String]
+fn deserialize_binance_orders<'de, D>(deserializer: D) -> std::result::Result<Vec<Order>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    let raw: Vec<[String; 2]> = Vec::deserialize(deserializer)?;
+
+    raw.into_iter()
+        .map(|[price, quantity]| {
+            let price = price.parse::<f64>()
+                .map_err(|_| D::Error::custom(format!("Failed to parse price as f64: {}", price)))?;
+            let quantity = quantity.parse::<f64>()
+                .map_err(|_| D::Error::custom(format!("Failed to parse quantity as f64: {}", quantity)))?;
+
+            Ok(Order { price, quantity })
+        })
+        .collect()
 }
 
 #[derive(Clone)]
@@ -104,14 +123,8 @@ impl BinanceExchange {
 
         // Update the order book with the initial data
         let mut order_book = self.order_book.write().await;
-        order_book.bids = response.bids.iter().map(|bid| Order {
-            price: bid[0].parse::<f64>().unwrap_or(0.0),
-            quantity: bid[1].parse::<f64>().unwrap_or(0.0),
-        }).collect();
-        order_book.asks = response.asks.iter().map(|ask| Order {
-            price: ask[0].parse::<f64>().unwrap_or(0.0),
-            quantity: ask[1].parse::<f64>().unwrap_or(0.0),
-        }).collect();
+        order_book.bids = response.bids;
+        order_book.asks = response.asks;
         order_book.timestamp = SystemTime::now();
 
         // Start WebSocket connection
@@ -151,20 +164,14 @@ impl BinanceExchange {
                                 if !update.bids.is_empty() && !update.asks.is_empty() {
                                     let current_best_bid = order_book.bids[0].price;
                                     let current_best_ask = order_book.asks[0].price;
-                                    let new_best_bid = update.bids[0][0].parse::<f64>().unwrap_or(0.0);
-                                    let new_best_ask = update.asks[0][0].parse::<f64>().unwrap_or(0.0);
+                                    let new_best_bid = update.bids[0].price;
+                                    let new_best_ask = update.asks[0].price;
 
                                     if new_best_bid != current_best_bid || new_best_ask != current_best_ask {
                                         println!("Updating order book - Old: {}/{} New: {}/{}",
                                             current_best_bid, current_best_ask, new_best_bid, new_best_ask);
-                                        order_book.bids = update.bids.iter().map(|bid| Order {
-                                            price: bid[0].parse::<f64>().unwrap_or(0.0),
-                                            quantity: bid[1].parse::<f64>().unwrap_or(0.0),
-                                        }).collect();
-                                        order_book.asks = update.asks.iter().map(|ask| Order {
-                                            price: ask[0].parse::<f64>().unwrap_or(0.0),
-                                            quantity: ask[1].parse::<f64>().unwrap_or(0.0),
-                                        }).collect();
+                                        order_book.bids = update.bids;
+                                        order_book.asks = update.asks;
                                     }
                                     // Always update the timestamp when we receive valid data
                                     order_book.timestamp = SystemTime::now();

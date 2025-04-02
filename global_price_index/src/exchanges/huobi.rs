@@ -14,10 +14,11 @@ fn get_huobi_url() -> String {
     env::var("HUOBI_URL").unwrap_or_else(|_| "https://api.huobi.pro/market/depth".to_string())
 }
 
+// API Huobi returns [price: float, quantity: float]
 #[derive(Debug, Serialize, Deserialize)]
 struct HuobiOrderBook {
-    bids: Vec<[f64; 2]>, // [price, quantity]
-    asks: Vec<[f64; 2]>, // [price, quantity]
+    bids: Vec<Order>,
+    asks: Vec<Order>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -114,17 +115,17 @@ impl Exchange for HuobiExchange {
             bids: tick
                 .bids
                 .into_iter()
-                .map(|[price, _]| Order {
-                    price,
-                    quantity: 0.0,
+                .map(|order| Order {
+                    price: order.price,
+                    quantity: order.quantity,
                 })
                 .collect(),
             asks: tick
                 .asks
                 .into_iter()
-                .map(|[price, _]| Order {
-                    price,
-                    quantity: 0.0,
+                .map(|order| Order {
+                    price: order.price,
+                    quantity: order.quantity,
                 })
                 .collect(),
             timestamp: SystemTime::now(),

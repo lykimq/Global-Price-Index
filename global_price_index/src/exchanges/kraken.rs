@@ -18,15 +18,16 @@ fn get_kraken_url() -> String {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct KrakenOrderBook {
-    #[serde(deserialize_with = "deserialize_order_book")]
-    bids: Vec<[String; 3]>, // [price, quantity, timestamp]
-    #[serde(deserialize_with = "deserialize_order_book")]
-    asks: Vec<[String; 3]>, // [price, quantity, timestamp]
+    #[serde(deserialize_with = "deserialize_kraken_orders")]
+    bids: Vec<Order>,
+    #[serde(deserialize_with = "deserialize_kraken_orders")]
+    asks: Vec<Order>,
 }
 
-fn deserialize_order_book<'de, D>(
+// Kraken returns [price: String, volume: String, timestamp: Integer (Unix time)]
+fn deserialize_kraken_orders<'de, D>(
     deserializer: D,
-) -> std::result::Result<Vec<[String; 3]>, D::Error>
+) -> std::result::Result<Vec<Order>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -34,21 +35,20 @@ where
     let raw: Vec<[serde_json::Value; 3]> = Vec::deserialize(deserializer)?;
 
     raw.into_iter()
-        .map(|[price, quantity, timestamp]| {
-            let price = price
+        .map(|[price, volume, _timestamp]| {
+            let price_str = price
                 .as_str()
-                .ok_or_else(|| D::Error::custom("price must be a string"))?
-                .to_string();
-            let quantity = quantity
+                .ok_or_else(|| D::Error::custom("price must be a string"))?;
+            let volume_str = volume
                 .as_str()
-                .ok_or_else(|| D::Error::custom("quantity must be a string"))?
-                .to_string();
-            let timestamp = timestamp
-                .as_i64()
-                .ok_or_else(|| D::Error::custom("timestamp must be a number"))?
-                .to_string();
+                .ok_or_else(|| D::Error::custom("volume must be a string"))?;
 
-            Ok([price, quantity, timestamp])
+            let price = price_str.parse::<f64>()
+                .map_err(|_| D::Error::custom("Failed to parse price as f64"))?;
+            let quantity = volume_str.parse::<f64>()
+                .map_err(|_| D::Error::custom("Failed to parse volume as f64"))?;
+
+            Ok(Order { price, quantity })
         })
         .collect()
 }
@@ -126,22 +126,8 @@ impl Exchange for KrakenExchange {
 
         let order_book = response.result.xbtusdt;
         Ok(OrderBook {
-            bids: order_book
-                .bids
-                .into_iter()
-                .map(|[price, quantity, _]| Order {
-                    price: price.parse::<f64>().unwrap_or(0.0),
-                    quantity: quantity.parse::<f64>().unwrap_or(0.0),
-                })
-                .collect(),
-            asks: order_book
-                .asks
-                .into_iter()
-                .map(|[price, quantity, _]| Order {
-                    price: price.parse::<f64>().unwrap_or(0.0),
-                    quantity: quantity.parse::<f64>().unwrap_or(0.0),
-                })
-                .collect(),
+            bids: order_book.bids,
+            asks: order_book.asks,
             timestamp: SystemTime::now(),
         })
     }
