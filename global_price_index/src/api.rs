@@ -45,7 +45,6 @@ pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     }
 
     // Fetch prices from Kraken
-
     match data.kraken.get_mid_price().await {
         Ok(price) => {
             exchange_prices.push(price);
@@ -54,7 +53,6 @@ pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     }
 
     // Fetch prices from Huobi
-
     match data.huobi.get_mid_price().await {
         Ok(price) => {
             exchange_prices.push(price);
