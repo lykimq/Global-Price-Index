@@ -146,7 +146,6 @@ make install
 3. Configure environment variables (`.env`):
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
 ```
 
 ## Running
