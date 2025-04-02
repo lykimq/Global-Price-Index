@@ -65,11 +65,58 @@ pub struct Settings {
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
-        let config = Config::builder()
-            .add_source(File::with_name("config"))
-            .build()?;
+        // Try to load config file
+        let config_builder = Config::builder().add_source(File::with_name("config"));
 
-        config.try_deserialize()
+        // Attempt to build the configuration from file
+        let config_result = config_builder.build();
+
+        match config_result {
+            Ok(config) => {
+                // Successfully loaded config file, deserialize it
+                config.try_deserialize()
+            }
+            Err(err) => {
+                // Config file not found or error loading, use default values
+                eprintln!(
+                    "Warning: Could not load config file: {}, using default values",
+                    err
+                );
+
+                Ok(Self {
+                    server: Server {
+                        host: "127.0.0.1".to_string(),
+                        port: 8080,
+                    },
+                    frontend: Frontend {
+                        dir: "frontend".to_string(),
+                        static_dir: "static".to_string(),
+                        templates_dir: "templates".to_string(),
+                        index_html: "index.html".to_string(),
+                    },
+                    exchange: Exchange {
+                        binance: BinanceConfig {
+                            ws_url: "wss://stream.binance.com:9443/ws/btcusdt@depth".to_string(),
+                            rest_url:
+                                "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000"
+                                    .to_string(),
+                        },
+                        kraken: KrakenConfig {
+                            url: "https://api.kraken.com/0/public/Depth?pair=XBTUSDT".to_string(),
+                        },
+                        huobi: HuobiConfig {
+                            url: "https://api.huobi.pro/market/depth".to_string(),
+                        },
+                        config: ExchangeConfig {
+                            initial_reconnect_delay: 1,
+                            ping_interval: 30,
+                            max_reconnect_delay: 300,
+                            ping_retry_count: 3,
+                        },
+                    },
+                })
+            }
+        }
     }
 
     // Helper method to reload configuration
