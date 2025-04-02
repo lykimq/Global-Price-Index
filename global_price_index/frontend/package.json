@@ -8,7 +8,7 @@
     "start": "npm run build",
     "format": "prettier --write \"static/**/*.ts\"",
     "lint": "eslint \"static/**/*.ts\"",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "typescript": "^5.3.3"
