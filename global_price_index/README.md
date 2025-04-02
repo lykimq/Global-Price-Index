@@ -71,7 +71,39 @@ GET /global-price
 }
 ```
 Notes:
-- If Huobi fails, the global price uses Binance + Kraken.
+- **Fault Tolerance:** The service gracefully handles exchange failures:
+  + If any single exchange fails (e.g., Huobi, Binance, or Kraken), the global price index uses the average of data from the remaining functioning exchanges.
+  + If two exchanges fail, the global price index uses data from the single remaining exchange.
+  + If all exchanges fail, the API returns a 503 Service Unavailable response with an error message.
+
+## Security
+
+The current implementation includes several security features:
+
+- **Secure Communication**:
+  + Uses HTTPS for REST API calls to exchanges
+  + Uses WSS (WebSocket Secure) for real-time data streams
+  + Default TLS verification enabled in HTTP and WebSocket clients
+
+- **Input Validation**:
+  + Validates all price data before processing (non-empty, positive values)
+  + Verifies bid/ask spreads are reasonable (ask > bid)
+  + Enforces proper data formats from exchange APIs
+
+- **Error Handling**:
+  + Comprehensive error types for different failure scenarios
+  + Avoids exposing internal errors to API consumers
+  + Graceful recovery from temporary failures
+
+- **Connection Security**:
+  + Configurable timeouts for HTTP requests (5 seconds default)
+  + Ping/pong mechanisms to verify WebSocket connection health
+  + Automatic reconnection with backoff to prevent overwhelming servers
+
+- **Data Integrity**:
+  + Thread-safe access to shared state using `Arc<RwLock<>>`
+  + Atomicity in price calculations
+  + Timestamp validation and consistent formatting
 
 ## Prerequisites
 
@@ -138,15 +170,8 @@ cargo test --test property_tests -- --test-threads=1 --ignored
 
 **Exchange Integration**
 
-| Exchange | Protocol | Endpoint                      | Thread Safety    |
-|----------|----------|-------------------------------|------------------|
-| Binance  | WebSocket| `btcusdt@depth`               | `Arc<RwLock<OrderBook>>` |
-| Kraken   | REST     | `/Depth?pair=XBTUSDT`         | `Arc<KrakenExchange>` |
-| Huobi    | REST     | `/market/depth?symbol=btcusdt`| `Arc<HuobiExchange>` |
-
-## Planned Improvements
-
-- Structured logging with `tracing` for diagnostics
-- Metrics collection and monitoring
-- Additional exchange integrations
-- Enhanced error handling and circuit breakers
+| Exchange | Protocol    | Endpoint                      | Thread Safety                                      |
+|----------|-------------|-------------------------------|----------------------------------------------------|
+| Binance  | WebSocket   | `btcusdt@depth`               | `Arc<RwLock<OrderBook>>` for persistent state      |
+| Kraken   | REST        | `/Depth?pair=XBTUSDT`         | Stateless - thread-safe via `Arc<KrakenExchange>`  |
+| Huobi    | REST        | `/market/depth?symbol=btcusdt`| Stateless - thread-safe via `Arc<HuobiExchange>`   |
