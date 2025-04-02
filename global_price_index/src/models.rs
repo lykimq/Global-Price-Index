@@ -104,7 +104,7 @@ impl GlobalPriceIndex {
             // Time-based weighting system
             // -----------------------------------------------------------
             // Rather than using a simple average where all prices have
-            // equal influence, we apply time-based weighting to give
+            // equal influence, apply time-based weighting to give
             // more recent prices higher influence on the final result.
             // This makes the global price more responsive to recent market changes.
             let mut weighted_sum = 0.0;
@@ -112,10 +112,10 @@ impl GlobalPriceIndex {
 
             // The decay factor (in seconds) controls how quickly older prices lose influence
             // With a decay factor of 300 seconds (5 minutes):
-            // - A price from right now gets weight = 1.0 (100% influence)
-            // - A price 5 minutes old gets weight ≈ 0.368 (36.8% influence)
-            // - A price 10 minutes old gets weight ≈ 0.135 (13.5% influence)
-            // - A price 20 minutes old gets weight ≈ 0.018 (1.8% influence)
+            // - A price from right now gets weight = e^(-0/300) = 1.0 (100% influence)
+            // - A price 5 minutes old gets weight ≈ e^(-300/300) ≈ 0.368 (36.8% influence)
+            // - A price 10 minutes old gets weight ≈ e^(-600/300) ≈ 0.135 (13.5% influence)
+            // - A price 20 minutes old gets weight ≈ e^(-1200/300) ≈ 0.018 (1.8% influence)
             let decay_factor = crate::config::get_decay_factor();
 
             for exchange_price in &valid_exchanges {
