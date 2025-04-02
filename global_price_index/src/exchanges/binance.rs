@@ -90,10 +90,12 @@ where
 
     raw.into_iter()
         .map(|[price, quantity]| {
-            let price = price.parse::<f64>()
-                .map_err(|_| D::Error::custom(format!("Failed to parse price as f64: {}", price)))?;
-            let quantity = quantity.parse::<f64>()
-                .map_err(|_| D::Error::custom(format!("Failed to parse quantity as f64: {}", quantity)))?;
+            let price = price.parse::<f64>().map_err(|_| {
+                D::Error::custom(format!("Failed to parse price as f64: {}", price))
+            })?;
+            let quantity = quantity.parse::<f64>().map_err(|_| {
+                D::Error::custom(format!("Failed to parse quantity as f64: {}", quantity))
+            })?;
 
             Ok(Order { price, quantity })
         })
@@ -168,7 +170,10 @@ impl BinanceExchange {
             let quantity = update.quantity;
 
             // Check if this price level already exists
-            if let Some(existing_idx) = all_orders.iter().position(|order| (order.price - price).abs() < f64::EPSILON) {
+            if let Some(existing_idx) = all_orders
+                .iter()
+                .position(|order| (order.price - price).abs() < f64::EPSILON)
+            {
                 if quantity > 0.0 {
                     // Update existing order
                     all_orders[existing_idx].quantity = quantity;
@@ -185,10 +190,18 @@ impl BinanceExchange {
         // Sort all orders
         if is_bids {
             // Sort bids in descending order (highest bid first)
-            all_orders.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
+            all_orders.sort_by(|a, b| {
+                b.price
+                    .partial_cmp(&a.price)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
         } else {
             // Sort asks in ascending order (lowest ask first)
-            all_orders.sort_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal));
+            all_orders.sort_by(|a, b| {
+                a.price
+                    .partial_cmp(&b.price)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
         }
 
         // Replace the existing orders with the updated ones

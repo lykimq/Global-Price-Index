@@ -88,15 +88,27 @@ fn test_order_book_mid_price_calculation() {
     let order_book = OrderBook {
         bids: vec![
             // Best bid: 2.0 BTC at 50,000 USDT (highest price someone will buy at)
-            Order { price: 50000.0, quantity: 2.0 },
+            Order {
+                price: 50000.0,
+                quantity: 2.0,
+            },
             // 3.0 BTC at 49,900 USDT
-            Order { price: 49900.0, quantity: 3.0 },
+            Order {
+                price: 49900.0,
+                quantity: 3.0,
+            },
         ],
         asks: vec![
             // Best ask: 1.0 BTC at 50,100 USDT (lowest price someone will sell at)
-            Order { price: 50100.0, quantity: 1.0 },
+            Order {
+                price: 50100.0,
+                quantity: 1.0,
+            },
             // 2.0 BTC at 50,200 USDT
-            Order { price: 50200.0, quantity: 2.0 },
+            Order {
+                price: 50200.0,
+                quantity: 2.0,
+            },
         ],
         timestamp: SystemTime::now(),
     };
@@ -126,8 +138,14 @@ fn test_empty_order_book_mid_price() {
 #[test]
 fn test_invalid_order_book_mid_price() {
     let order_book = OrderBook {
-        bids: vec![Order { price: 0.0, quantity: 1.0 }],
-        asks: vec![Order { price: 0.0, quantity: 1.0 }],
+        bids: vec![Order {
+            price: 0.0,
+            quantity: 1.0,
+        }],
+        asks: vec![Order {
+            price: 0.0,
+            quantity: 1.0,
+        }],
         timestamp: SystemTime::now(),
     };
 

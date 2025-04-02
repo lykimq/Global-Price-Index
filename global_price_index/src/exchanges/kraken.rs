@@ -25,9 +25,7 @@ struct KrakenOrderBook {
 }
 
 // Kraken returns [price: String, volume: String, timestamp: Integer (Unix time)]
-fn deserialize_kraken_orders<'de, D>(
-    deserializer: D,
-) -> std::result::Result<Vec<Order>, D::Error>
+fn deserialize_kraken_orders<'de, D>(deserializer: D) -> std::result::Result<Vec<Order>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -43,9 +41,11 @@ where
                 .as_str()
                 .ok_or_else(|| D::Error::custom("volume must be a string"))?;
 
-            let price = price_str.parse::<f64>()
+            let price = price_str
+                .parse::<f64>()
                 .map_err(|_| D::Error::custom("Failed to parse price as f64"))?;
-            let quantity = volume_str.parse::<f64>()
+            let quantity = volume_str
+                .parse::<f64>()
                 .map_err(|_| D::Error::custom("Failed to parse volume as f64"))?;
 
             Ok(Order { price, quantity })

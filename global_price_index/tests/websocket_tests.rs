@@ -125,11 +125,7 @@ async fn test_binance_websocket_reconnect() {
 
     // Verify the order book structure is valid
     for bid in &reconnect_order_book.bids {
-        assert!(
-            bid.price.is_finite(),
-            "Invalid bid price: {}",
-            bid.price
-        );
+        assert!(bid.price.is_finite(), "Invalid bid price: {}", bid.price);
         assert!(
             bid.quantity.is_finite(),
             "Invalid bid quantity: {}",
@@ -138,11 +134,7 @@ async fn test_binance_websocket_reconnect() {
     }
 
     for ask in &reconnect_order_book.asks {
-        assert!(
-            ask.price.is_finite(),
-            "Invalid ask price: {}",
-            ask.price
-        );
+        assert!(ask.price.is_finite(), "Invalid ask price: {}", ask.price);
         assert!(
             ask.quantity.is_finite(),
             "Invalid ask quantity: {}",
