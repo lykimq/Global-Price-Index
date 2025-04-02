@@ -1,0 +1,29 @@
+# Server Configuration
+[server]
+host = "127.0.0.1"
+port = 8080
+
+# Frontend Paths
+[frontend]
+dir = "frontend"
+static_dir = "static"
+templates_dir = "templates"
+index_html = "index.html"
+
+# Exchange API URLs
+[exchange.binance]
+ws_url = "wss://stream.binance.com:9443/ws/btcusdt@depth"
+rest_url = "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000"
+
+[exchange.kraken]
+url = "https://api.kraken.com/0/public/Depth?pair=XBTUSDT"
+
+[exchange.huobi]
+url = "https://api.huobi.pro/market/depth"
+
+# Exchange Configuration
+[exchange.config]
+initial_reconnect_delay = 1 # 1 second
+ping_interval = 30 # 30 seconds
+max_reconnect_delay = 300 # 5 minutes
+ping_retry_count = 3 # 3 retries

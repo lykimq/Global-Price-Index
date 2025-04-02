@@ -1,12 +1,14 @@
 // WebSocket client, order book sync
+use crate::config::{
+    get_binance_rest_url, get_binance_ws_url, get_initial_reconnect_delay,
+    get_max_reconnect_delay, get_ping_interval, get_ping_retry_count,
+};
 use crate::error::{PriceIndexError, Result};
 use crate::exchanges::Exchange;
 use crate::models::{Order, OrderBook};
 use async_trait::async_trait;
-use dotenv::dotenv;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::net::TcpStream;
@@ -19,55 +21,6 @@ use url::Url;
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WsSink = futures::stream::SplitSink<WsStream, Message>;
 type WsStreamRead = futures::stream::SplitStream<WsStream>;
-
-// Load environment variables with fallbacks
-fn get_binance_ws_url() -> String {
-    dotenv().ok();
-    env::var("BINANCE_WS_URL")
-        .unwrap_or_else(|_| "wss://stream.binance.com:9443/ws/btcusdt@depth".to_string())
-}
-
-fn get_binance_rest_url() -> String {
-    dotenv().ok();
-    env::var("BINANCE_REST_URL").unwrap_or_else(|_| {
-        "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000".to_string()
-    })
-}
-
-fn get_initial_reconnect_delay() -> Duration {
-    dotenv().ok();
-    let seconds = env::var("INITIAL_RECONNECT_DELAY")
-        .unwrap_or_else(|_| "1".to_string())
-        .parse()
-        .unwrap_or(1);
-    Duration::from_secs(seconds)
-}
-
-fn get_ping_interval() -> Duration {
-    dotenv().ok();
-    let seconds = env::var("PING_INTERVAL")
-        .unwrap_or_else(|_| "30".to_string())
-        .parse()
-        .unwrap_or(30);
-    Duration::from_secs(seconds)
-}
-
-fn get_max_reconnect_delay() -> Duration {
-    dotenv().ok();
-    let seconds = env::var("MAX_RECONNECT_DELAY")
-        .unwrap_or_else(|_| "300".to_string()) // Default 5 minutes
-        .parse()
-        .unwrap_or(300);
-    Duration::from_secs(seconds)
-}
-
-fn get_ping_retry_count() -> u32 {
-    dotenv().ok();
-    env::var("PING_RETRY_COUNT")
-        .unwrap_or_else(|_| "3".to_string())
-        .parse()
-        .unwrap_or(3)
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct BinanceOrderBook {

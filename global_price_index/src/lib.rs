@@ -4,12 +4,14 @@
 //! from multiple cryptocurrency exchanges.
 
 pub mod api;
+pub mod config;
 pub mod error;
 pub mod exchanges;
 pub mod models;
 
 // Re-export commonly used items
 pub use api::start_server;
+pub use config::SETTINGS;
 pub use error::{PriceIndexError, Result};
 pub use models::{ExchangePrice, GlobalPriceIndex, OrderBook};
 

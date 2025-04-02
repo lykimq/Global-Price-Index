@@ -1,20 +1,12 @@
 // REST client, polling logic
 
+use crate::config::get_kraken_url;
 use crate::error::{PriceIndexError, Result};
 use crate::exchanges::Exchange;
 use crate::models::{Order, OrderBook};
 use async_trait::async_trait;
-use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::time::SystemTime;
-
-// Load environment variable with fallback
-fn get_kraken_url() -> String {
-    dotenv().ok();
-    env::var("KRAKEN_URL")
-        .unwrap_or_else(|_| "https://api.kraken.com/0/public/Depth?pair=XBTUSDT".to_string())
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct KrakenOrderBook {
