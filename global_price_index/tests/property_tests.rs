@@ -2,7 +2,17 @@ use global_price_index::models::OrderBook;
 use proptest::prelude::*;
 use std::time::SystemTime;
 
+// Configure proptest to explicitly use a specific regression file
 proptest! {
+    #![proptest_config(ProptestConfig {
+        // Explicitly set the regression file path
+        failure_persistence: Some(Box::new(proptest::test_runner::FileFailurePersistence::Direct(
+            "tests/property_tests.proptest-regressions".into()
+        ))),
+        cases: 100, // Number of test cases to run
+        .. ProptestConfig::default()
+    })]
+
     #[test]
     fn test_mid_price_properties(
         // Generate random values for bid and ask prices and quantities
