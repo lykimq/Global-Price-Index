@@ -89,7 +89,6 @@ async fn test_binance_websocket_reconnect() {
         .await
         .expect("Failed to fetch initial order book");
 
-    // Use first().map() pattern instead of direct indexing
     let init_best_bid = init_order_book.bids.first().map(|b| b.price)
         .expect("No bids available in initial order book");
     let init_best_ask = init_order_book.asks.first().map(|a| a.price)
@@ -111,7 +110,6 @@ async fn test_binance_websocket_reconnect() {
         .await
         .expect("Failed to fetch reconnected order book");
 
-    // Use first().map() pattern instead of direct indexing
     let reconnect_best_bid = reconnect_order_book.bids.first().map(|b| b.price)
         .expect("No bids available in reconnected order book");
     let reconnect_best_ask = reconnect_order_book.asks.first().map(|a| a.price)
