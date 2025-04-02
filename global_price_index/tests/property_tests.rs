@@ -1,4 +1,4 @@
-use global_price_index::models::OrderBook;
+use global_price_index::models::{Order, OrderBook};
 use proptest::prelude::*;
 use std::time::SystemTime;
 
@@ -27,8 +27,8 @@ proptest! {
         }
 
         let order_book = OrderBook{
-            bids: vec![[bid_price.to_string(), bid_quantity.to_string()]],
-            asks: vec![[ask_price.to_string(), ask_quantity.to_string()]],
+            bids: vec![Order { price: bid_price, quantity: bid_quantity }],
+            asks: vec![Order { price: ask_price, quantity: ask_quantity }],
             timestamp: SystemTime::now(),
         };
 
@@ -72,24 +72,24 @@ proptest! {
         asks.sort_by(|a, b| a[0].parse::<f64>().unwrap().partial_cmp(&b[0].parse::<f64>().unwrap()).unwrap());
 
         let order_book = OrderBook {
-            bids,
-            asks,
+            bids: bids.into_iter().map(|[price, quantity]| Order { price: price.parse::<f64>().unwrap(), quantity: quantity.parse::<f64>().unwrap() }).collect(),
+            asks: asks.into_iter().map(|[price, quantity]| Order { price: price.parse::<f64>().unwrap(), quantity: quantity.parse::<f64>().unwrap() }).collect(),
             timestamp: SystemTime::now(),
         };
 
         // Property 1: If we have both bids and asks, the best bid should be
         // less than or equal to the best ask
         if !order_book.bids.is_empty() && !order_book.asks.is_empty() {
-            let best_bid = order_book.bids[0][0].parse::<f64>().unwrap();
-            let best_ask = order_book.asks[0][0].parse::<f64>().unwrap();
+            let best_bid = order_book.bids[0].price;
+            let best_ask = order_book.asks[0].price;
             assert!(best_bid <= best_ask);
         }
 
         // Property 2: Bids should be in descending order
         if !order_book.bids.is_empty() {
             for i in 1..order_book.bids.len() {
-                let bid1 = order_book.bids[i][0].parse::<f64>().unwrap();
-                let bid2 = order_book.bids[i - 1][0].parse::<f64>().unwrap();
+                let bid1 = order_book.bids[i].price;
+                let bid2 = order_book.bids[i - 1].price;
                 assert!(bid1 <= bid2);
             }
         }
@@ -97,8 +97,8 @@ proptest! {
         // Property 3: Asks should be in ascending order
         if !order_book.asks.is_empty() {
             for i in 1..order_book.asks.len() {
-                let ask1 = order_book.asks[i][0].parse::<f64>().unwrap();
-                let ask2 = order_book.asks[i - 1][0].parse::<f64>().unwrap();
+                let ask1 = order_book.asks[i].price;
+                let ask2 = order_book.asks[i - 1].price;
                 assert!(ask1 >= ask2);
             }
         }

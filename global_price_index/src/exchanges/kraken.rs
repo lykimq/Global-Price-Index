@@ -2,7 +2,7 @@
 
 use crate::error::{PriceIndexError, Result};
 use crate::exchanges::Exchange;
-use crate::models::OrderBook;
+use crate::models::{Order, OrderBook};
 use async_trait::async_trait;
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
@@ -129,12 +129,18 @@ impl Exchange for KrakenExchange {
             bids: order_book
                 .bids
                 .into_iter()
-                .map(|[price, _, _]| [price, "0".to_string()])
+                .map(|[price, quantity, _]| Order {
+                    price: price.parse::<f64>().unwrap_or(0.0),
+                    quantity: quantity.parse::<f64>().unwrap_or(0.0),
+                })
                 .collect(),
             asks: order_book
                 .asks
                 .into_iter()
-                .map(|[price, _, _]| [price, "0".to_string()])
+                .map(|[price, quantity, _]| Order {
+                    price: price.parse::<f64>().unwrap_or(0.0),
+                    quantity: quantity.parse::<f64>().unwrap_or(0.0),
+                })
                 .collect(),
             timestamp: SystemTime::now(),
         })

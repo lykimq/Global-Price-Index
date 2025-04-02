@@ -1,7 +1,7 @@
 use global_price_index::{
     error::Result,
     exchanges::{binance::BinanceExchange, huobi::HuobiExchange, kraken::KrakenExchange, Exchange},
-    models::OrderBook,
+    models::{Order, OrderBook},
 };
 use std::time::SystemTime;
 
@@ -15,12 +15,12 @@ async fn test_binance_order_book_calculation() -> Result<()> {
     assert!(!order_book.asks.is_empty());
 
     // Verify price format
-    for [price, _] in order_book.bids.iter() {
-        assert!(price.parse::<f64>().is_ok());
+    for Order { price, .. } in order_book.bids.iter() {
+        assert!(price.is_finite());
     }
 
-    for [price, _] in order_book.asks.iter() {
-        assert!(price.parse::<f64>().is_ok());
+    for Order { price, .. } in order_book.asks.iter() {
+        assert!(price.is_finite());
     }
 
     // Verify timestamp
@@ -37,12 +37,12 @@ async fn test_kraken_order_book_calculation() -> Result<()> {
     assert!(!order_book.bids.is_empty());
     assert!(!order_book.asks.is_empty());
 
-    for [price, _] in order_book.bids.iter() {
-        assert!(price.parse::<f64>().is_ok());
+    for Order { price, .. } in order_book.bids.iter() {
+        assert!(price.is_finite());
     }
 
-    for [price, _] in order_book.asks.iter() {
-        assert!(price.parse::<f64>().is_ok());
+    for Order { price, .. } in order_book.asks.iter() {
+        assert!(price.is_finite());
     }
 
     assert!(order_book.timestamp <= SystemTime::now());
@@ -58,12 +58,12 @@ async fn test_huobi_orderbook_calculation() -> Result<()> {
     assert!(!order_book.bids.is_empty());
     assert!(!order_book.asks.is_empty());
 
-    for [price, _] in order_book.bids.iter() {
-        assert!(price.parse::<f64>().is_ok());
+    for Order { price, .. } in order_book.bids.iter() {
+        assert!(price.is_finite());
     }
 
-    for [price, _] in order_book.asks.iter() {
-        assert!(price.parse::<f64>().is_ok());
+    for Order { price, .. } in order_book.asks.iter() {
+        assert!(price.is_finite());
     }
 
     assert!(order_book.timestamp <= SystemTime::now());
@@ -88,15 +88,15 @@ fn test_order_book_mid_price_calculation() {
     let order_book = OrderBook {
         bids: vec![
             // Best bid: 2.0 BTC at 50,000 USDT (highest price someone will buy at)
-            ["50000.0".to_string(), "2.0".to_string()],
+            Order { price: 50000.0, quantity: 2.0 },
             // 3.0 BTC at 49,900 USDT
-            ["49900.0".to_string(), "3.0".to_string()],
+            Order { price: 49900.0, quantity: 3.0 },
         ],
         asks: vec![
             // Best ask: 1.0 BTC at 50,100 USDT (lowest price someone will sell at)
-            ["50100.0".to_string(), "1.0".to_string()],
+            Order { price: 50100.0, quantity: 1.0 },
             // 2.0 BTC at 50,200 USDT
-            ["50200.0".to_string(), "2.0".to_string()],
+            Order { price: 50200.0, quantity: 2.0 },
         ],
         timestamp: SystemTime::now(),
     };
@@ -126,8 +126,8 @@ fn test_empty_order_book_mid_price() {
 #[test]
 fn test_invalid_order_book_mid_price() {
     let order_book = OrderBook {
-        bids: vec![["invalid".to_string(), "1.0".to_string()]],
-        asks: vec![["50100.0".to_string(), "1.0".to_string()]],
+        bids: vec![Order { price: 0.0, quantity: 1.0 }],
+        asks: vec![Order { price: 0.0, quantity: 1.0 }],
         timestamp: SystemTime::now(),
     };
 

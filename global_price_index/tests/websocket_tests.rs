@@ -20,8 +20,8 @@ async fn test_binance_websocket_connection() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch order book");
-    let init_best_bid = init_order_book.bids[0][0].parse::<f64>().unwrap();
-    let init_best_ask = init_order_book.asks[0][0].parse::<f64>().unwrap();
+    let init_best_bid = init_order_book.bids[0].price;
+    let init_best_ask = init_order_book.asks[0].price;
     println!(
         "Initial order book - Best bid: {}, Best ask: {}",
         init_best_bid, init_best_ask
@@ -37,8 +37,8 @@ async fn test_binance_websocket_connection() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch updated order book");
-    let updated_best_bid = updated_order_book.bids[0][0].parse::<f64>().unwrap();
-    let updated_best_ask = updated_order_book.asks[0][0].parse::<f64>().unwrap();
+    let updated_best_bid = updated_order_book.bids[0].price;
+    let updated_best_ask = updated_order_book.asks[0].price;
     println!(
         "Updated order book - Best bid: {}, Best ask: {}",
         updated_best_bid, updated_best_ask
@@ -81,8 +81,8 @@ async fn test_binance_websocket_reconnect() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch initial order book");
-    let init_best_bid = init_order_book.bids[0][0].parse::<f64>().unwrap();
-    let init_best_ask = init_order_book.asks[0][0].parse::<f64>().unwrap();
+    let init_best_bid = init_order_book.bids[0].price;
+    let init_best_ask = init_order_book.asks[0].price;
     println!(
         "Initial order book - Best bid: {}, Best ask: {}",
         init_best_bid, init_best_ask
@@ -98,8 +98,8 @@ async fn test_binance_websocket_reconnect() {
         .fetch_order_book()
         .await
         .expect("Failed to fetch reconnected order book");
-    let reconnect_best_bid = reconnect_order_book.bids[0][0].parse::<f64>().unwrap();
-    let reconnect_best_ask = reconnect_order_book.asks[0][0].parse::<f64>().unwrap();
+    let reconnect_best_bid = reconnect_order_book.bids[0].price;
+    let reconnect_best_ask = reconnect_order_book.asks[0].price;
     println!(
         "Reconnected order book - Best bid: {}, Best ask: {}",
         reconnect_best_bid, reconnect_best_ask
@@ -125,30 +125,28 @@ async fn test_binance_websocket_reconnect() {
 
     // Verify the order book structure is valid
     for bid in &reconnect_order_book.bids {
-        assert_eq!(bid.len(), 2, "Invalid bid format: {:?}", bid);
         assert!(
-            bid[0].parse::<f64>().is_ok(),
+            bid.price.is_finite(),
             "Invalid bid price: {}",
-            bid[0]
+            bid.price
         );
         assert!(
-            bid[1].parse::<f64>().is_ok(),
+            bid.quantity.is_finite(),
             "Invalid bid quantity: {}",
-            bid[1]
+            bid.quantity
         );
     }
 
     for ask in &reconnect_order_book.asks {
-        assert_eq!(ask.len(), 2, "Invalid ask format: {:?}", ask);
         assert!(
-            ask[0].parse::<f64>().is_ok(),
+            ask.price.is_finite(),
             "Invalid ask price: {}",
-            ask[0]
+            ask.price
         );
         assert!(
-            ask[1].parse::<f64>().is_ok(),
+            ask.quantity.is_finite(),
             "Invalid ask quantity: {}",
-            ask[1]
+            ask.quantity
         );
     }
 

@@ -1,7 +1,7 @@
 // REST client, polling logic
 use crate::error::{PriceIndexError, Result};
 use crate::exchanges::Exchange;
-use crate::models::OrderBook;
+use crate::models::{Order, OrderBook};
 use async_trait::async_trait;
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
@@ -114,12 +114,18 @@ impl Exchange for HuobiExchange {
             bids: tick
                 .bids
                 .into_iter()
-                .map(|[price, _]| [price.to_string(), "0".to_string()])
+                .map(|[price, _]| Order {
+                    price,
+                    quantity: 0.0,
+                })
                 .collect(),
             asks: tick
                 .asks
                 .into_iter()
-                .map(|[price, _]| [price.to_string(), "0".to_string()])
+                .map(|[price, _]| Order {
+                    price,
+                    quantity: 0.0,
+                })
                 .collect(),
             timestamp: SystemTime::now(),
         })

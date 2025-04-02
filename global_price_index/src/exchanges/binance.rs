@@ -1,7 +1,7 @@
 // WebSocket client, order book sync
 use crate::error::{PriceIndexError, Result};
 use crate::exchanges::Exchange;
-use crate::models::OrderBook;
+use crate::models::{Order, OrderBook};
 use async_trait::async_trait;
 use dotenv::dotenv;
 use futures::{SinkExt, StreamExt};
@@ -104,8 +104,14 @@ impl BinanceExchange {
 
         // Update the order book with the initial data
         let mut order_book = self.order_book.write().await;
-        order_book.bids = response.bids;
-        order_book.asks = response.asks;
+        order_book.bids = response.bids.iter().map(|bid| Order {
+            price: bid[0].parse::<f64>().unwrap_or(0.0),
+            quantity: bid[1].parse::<f64>().unwrap_or(0.0),
+        }).collect();
+        order_book.asks = response.asks.iter().map(|ask| Order {
+            price: ask[0].parse::<f64>().unwrap_or(0.0),
+            quantity: ask[1].parse::<f64>().unwrap_or(0.0),
+        }).collect();
         order_book.timestamp = SystemTime::now();
 
         // Start WebSocket connection
@@ -143,16 +149,22 @@ impl BinanceExchange {
                                 let mut order_book = order_book.write().await;
                                 // Only update if we have valid data and it's different from current
                                 if !update.bids.is_empty() && !update.asks.is_empty() {
-                                    let current_best_bid = order_book.bids[0][0].parse::<f64>().unwrap_or(0.0);
-                                    let current_best_ask = order_book.asks[0][0].parse::<f64>().unwrap_or(0.0);
+                                    let current_best_bid = order_book.bids[0].price;
+                                    let current_best_ask = order_book.asks[0].price;
                                     let new_best_bid = update.bids[0][0].parse::<f64>().unwrap_or(0.0);
                                     let new_best_ask = update.asks[0][0].parse::<f64>().unwrap_or(0.0);
 
                                     if new_best_bid != current_best_bid || new_best_ask != current_best_ask {
                                         println!("Updating order book - Old: {}/{} New: {}/{}",
                                             current_best_bid, current_best_ask, new_best_bid, new_best_ask);
-                                        order_book.bids = update.bids;
-                                        order_book.asks = update.asks;
+                                        order_book.bids = update.bids.iter().map(|bid| Order {
+                                            price: bid[0].parse::<f64>().unwrap_or(0.0),
+                                            quantity: bid[1].parse::<f64>().unwrap_or(0.0),
+                                        }).collect();
+                                        order_book.asks = update.asks.iter().map(|ask| Order {
+                                            price: ask[0].parse::<f64>().unwrap_or(0.0),
+                                            quantity: ask[1].parse::<f64>().unwrap_or(0.0),
+                                        }).collect();
                                     }
                                     // Always update the timestamp when we receive valid data
                                     order_book.timestamp = SystemTime::now();

@@ -1,11 +1,16 @@
 // OrderBook, BidAsk, MidPrice
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Order {
+    pub price: f64,
+    pub quantity: f64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderBook {
-    pub bids: Vec<[String; 2]>, // [price, quantity]
-    pub asks: Vec<[String; 2]>, // [price, quantity]
+    pub bids: Vec<Order>, // [price, quantity]
+    pub asks: Vec<Order>, // [price, quantity]
     #[serde(with = "timestamp_serde")]
     pub timestamp: SystemTime,
 }
@@ -59,15 +64,15 @@ impl OrderBook {
         }
 
         // Get the best bid (highest price) and best ask (lowest price)
-        let best_bid = match self.bids[0][0].parse::<f64>() {
-            Ok(p) if p > 0.0 => p,
-            _ => return None,
-        };
+        let best_bid = self.bids[0].price;
+        if best_bid <= 0.0 {
+            return None;
+        }
 
-        let best_ask = match self.asks[0][0].parse::<f64>() {
-            Ok(p) if p > 0.0 => p,
-            _ => return None,
-        };
+        let best_ask = self.asks[0].price;
+        if best_ask <= 0.0 {
+            return None;
+        }
 
         // Ensure the spread is reasonable (ask > bid)
         if best_ask <= best_bid {
