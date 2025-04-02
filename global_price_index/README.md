@@ -26,7 +26,7 @@ This service computes a global BTC/USDT price index by:
 ```
 mid_price = (best_bid + best_ask)/2
 ```
-    + Validation: Skips invalid data (empty bids/asks).
+Validation: Skips invalid data (empty bids/asks).
 - Global Index:
     + Average of valid mid-prices (ignores failed exchanges).
 - Fault Tolerance:
