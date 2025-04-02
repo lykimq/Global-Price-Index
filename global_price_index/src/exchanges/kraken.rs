@@ -19,9 +19,9 @@ fn get_kraken_url() -> String {
 #[derive(Debug, Serialize, Deserialize)]
 struct KrakenOrderBook {
     #[serde(deserialize_with = "deserialize_order_book")]
-    bids: Vec<[String; 3]>, // [price, volume, timestamp]
+    bids: Vec<[String; 3]>, // [price, quantity, timestamp]
     #[serde(deserialize_with = "deserialize_order_book")]
-    asks: Vec<[String; 3]>, // [price, volume, timestamp]
+    asks: Vec<[String; 3]>, // [price, quantity, timestamp]
 }
 
 fn deserialize_order_book<'de, D>(
@@ -34,21 +34,21 @@ where
     let raw: Vec<[serde_json::Value; 3]> = Vec::deserialize(deserializer)?;
 
     raw.into_iter()
-        .map(|[price, volume, timestamp]| {
+        .map(|[price, quantity, timestamp]| {
             let price = price
                 .as_str()
                 .ok_or_else(|| D::Error::custom("price must be a string"))?
                 .to_string();
-            let volume = volume
+            let quantity = quantity
                 .as_str()
-                .ok_or_else(|| D::Error::custom("volume must be a string"))?
+                .ok_or_else(|| D::Error::custom("quantity must be a string"))?
                 .to_string();
             let timestamp = timestamp
                 .as_i64()
                 .ok_or_else(|| D::Error::custom("timestamp must be a number"))?
                 .to_string();
 
-            Ok([price, volume, timestamp])
+            Ok([price, quantity, timestamp])
         })
         .collect()
 }

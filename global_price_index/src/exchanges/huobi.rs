@@ -16,8 +16,8 @@ fn get_huobi_url() -> String {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct HuobiOrderBook {
-    bids: Vec<[f64; 2]>, // [price, volume]
-    asks: Vec<[f64; 2]>, // [price, volume]
+    bids: Vec<[f64; 2]>, // [price, quantity]
+    asks: Vec<[f64; 2]>, // [price, quantity]
 }
 
 #[derive(Debug, Serialize, Deserialize)]
