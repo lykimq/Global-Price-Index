@@ -6,16 +6,22 @@ use std::time::Duration;
 
 // Initialize global configuration
 lazy_static! {
+    /// Global configuration instance that is initialized once and can be accessed from anywhere
+    ///
+    /// Uses lazy_static for one-time initialization and RwLock for thread-safe access.
+    /// The configuration is loaded from config.toml or falls back to default values.
     pub static ref SETTINGS: RwLock<Settings> =
         RwLock::new(Settings::new().expect("Failed to load configuration"));
 }
 
+/// Server configuration settings
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
     pub host: String,
     pub port: u16,
 }
 
+/// Frontend paths and file locations
 #[derive(Debug, Deserialize, Clone)]
 pub struct Frontend {
     pub dir: String,
@@ -24,22 +30,26 @@ pub struct Frontend {
     pub index_html: String,
 }
 
+/// Binance-specific configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct BinanceConfig {
     pub ws_url: String,
     pub rest_url: String,
 }
 
+/// Kraken-specific configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct KrakenConfig {
     pub url: String,
 }
 
+/// Huobi-specific configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct HuobiConfig {
     pub url: String,
 }
 
+/// Common exchange configuration parameters
 #[derive(Debug, Deserialize, Clone)]
 pub struct ExchangeConfig {
     pub initial_reconnect_delay: u64,
@@ -48,11 +58,13 @@ pub struct ExchangeConfig {
     pub ping_retry_count: u32,
 }
 
+/// Time-based price weighting configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct PriceWeighting {
     pub decay_factor: f64,
 }
 
+/// Exchange-specific configurations
 #[derive(Debug, Deserialize, Clone)]
 pub struct Exchange {
     pub binance: BinanceConfig,
@@ -61,6 +73,7 @@ pub struct Exchange {
     pub config: ExchangeConfig,
 }
 
+/// Main settings structure that contains all configuration sections
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub server: Server,
@@ -70,6 +83,13 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Creates a new Settings instance by loading from config.toml or using defaults
+    ///
+    /// This function attempts to load configuration from a file,
+    /// and falls back to default values if the file is not found or has errors.
+    ///
+    /// Returns:
+    ///   Result<Self, ConfigError>: The settings or a configuration error
     pub fn new() -> Result<Self, ConfigError> {
         // Try to load config file
         let config_builder = Config::builder().add_source(File::with_name("config"));
@@ -128,7 +148,13 @@ impl Settings {
         }
     }
 
-    // Helper method to reload configuration
+    /// Reloads configuration from the file
+    ///
+    /// This function loads the latest configuration from disk
+    /// and updates the global SETTINGS instance.
+    ///
+    /// Returns:
+    ///   Result<(), ConfigError>: Success or a configuration error
     pub fn reload() -> Result<(), ConfigError> {
         let settings = Settings::new()?;
         let mut write_guard = SETTINGS.write().unwrap();
@@ -138,22 +164,28 @@ impl Settings {
 }
 
 // Convenience methods to get configuration values
+
+/// Returns the Binance WebSocket URL
 pub fn get_binance_ws_url() -> String {
     SETTINGS.read().unwrap().exchange.binance.ws_url.clone()
 }
 
+/// Returns the Binance REST API URL
 pub fn get_binance_rest_url() -> String {
     SETTINGS.read().unwrap().exchange.binance.rest_url.clone()
 }
 
+/// Returns the Kraken API URL
 pub fn get_kraken_url() -> String {
     SETTINGS.read().unwrap().exchange.kraken.url.clone()
 }
 
+/// Returns the Huobi API URL
 pub fn get_huobi_url() -> String {
     SETTINGS.read().unwrap().exchange.huobi.url.clone()
 }
 
+/// Returns the initial reconnect delay as a Duration
 pub fn get_initial_reconnect_delay() -> Duration {
     Duration::from_secs(
         SETTINGS
@@ -165,39 +197,48 @@ pub fn get_initial_reconnect_delay() -> Duration {
     )
 }
 
+/// Returns the WebSocket ping interval as a Duration
 pub fn get_ping_interval() -> Duration {
     Duration::from_secs(SETTINGS.read().unwrap().exchange.config.ping_interval)
 }
 
+/// Returns the maximum reconnect delay as a Duration
 pub fn get_max_reconnect_delay() -> Duration {
     Duration::from_secs(SETTINGS.read().unwrap().exchange.config.max_reconnect_delay)
 }
 
+/// Returns the ping retry count
 pub fn get_ping_retry_count() -> u32 {
     SETTINGS.read().unwrap().exchange.config.ping_retry_count
 }
 
+/// Returns the decay factor for time-based price weighting
 pub fn get_decay_factor() -> f64 {
     SETTINGS.read().unwrap().price_weighting.decay_factor
 }
 
+/// Returns the server address string in format "host:port"
 pub fn get_server_addr() -> String {
     let settings = SETTINGS.read().unwrap();
     format!("{}:{}", settings.server.host, settings.server.port)
 }
 
+/// Returns the frontend directory path
 pub fn get_frontend_dir() -> String {
     SETTINGS.read().unwrap().frontend.dir.clone()
 }
 
+/// Returns the static files directory path
 pub fn get_static_dir() -> String {
     SETTINGS.read().unwrap().frontend.static_dir.clone()
 }
 
+/// Returns the templates directory path
 pub fn get_templates_dir() -> String {
     SETTINGS.read().unwrap().frontend.templates_dir.clone()
 }
 
+/// Returns the index HTML file name
 pub fn get_index_html() -> String {
     SETTINGS.read().unwrap().frontend.index_html.clone()
 }

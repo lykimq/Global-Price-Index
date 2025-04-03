@@ -22,6 +22,7 @@ type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WsSink = futures::stream::SplitSink<WsStream, Message>;
 type WsStreamRead = futures::stream::SplitStream<WsStream>;
 
+/// Binance order book structure that matches the Binance API response format
 #[derive(Debug, Serialize, Deserialize)]
 struct BinanceOrderBook {
     #[serde(rename = "bids", deserialize_with = "deserialize_binance_orders")]
@@ -33,7 +34,10 @@ struct BinanceOrderBook {
     last_update_id: i64, // Last update ID
 }
 
-// API Binance returns [price: String, quantity: String]
+/// Custom deserializer for Binance order book data
+///
+/// Binance returns orders as [price: String, quantity: String]
+/// This function converts them to our Order struct with f64 values
 fn deserialize_binance_orders<'de, D>(deserializer: D) -> std::result::Result<Vec<Order>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -55,13 +59,25 @@ where
         .collect()
 }
 
+/// The BinanceExchange implements the Exchange trait for Binance
+///
+/// It uses WebSockets for real-time order book updates and maintains
+/// an in-memory order book that is updated incrementally.
 #[derive(Clone)]
 pub struct BinanceExchange {
     order_book: Arc<RwLock<OrderBook>>,
 }
 
 impl BinanceExchange {
-    // Create a new Binance exchange instance
+    /// Creates a new BinanceExchange instance
+    ///
+    /// This function:
+    /// 1. Creates an empty order book
+    /// 2. Initializes the exchange by fetching the initial order book snapshot
+    /// 3. Starts a WebSocket connection for real-time updates
+    ///
+    /// Returns:
+    ///   Result<Self>: The exchange instance or an error
     pub async fn new() -> Result<Self> {
         let order_book = Arc::new(RwLock::new(OrderBook {
             bids: vec![],
@@ -74,7 +90,12 @@ impl BinanceExchange {
         Ok(exchange)
     }
 
-    // Initialize the exchange by fetching initial order book data
+    /// Initializes the exchange by fetching the initial order book data
+    ///
+    /// This function:
+    /// 1. Fetches the initial order book snapshot from Binance REST API
+    /// 2. Updates the in-memory order book with the snapshot data
+    /// 3. Starts a WebSocket connection for real-time updates
     async fn initialize(&self) -> Result<()> {
         // Fetch initial order book data from Binance REST API
         let client = reqwest::Client::new();
@@ -96,6 +117,10 @@ impl BinanceExchange {
         Ok(())
     }
 
+    /// Establishes a WebSocket connection to Binance
+    ///
+    /// Returns:
+    ///   Result<(WsSink, WsStreamRead)>: The WebSocket write and read streams
     async fn connect_websocket() -> Result<(WsSink, WsStreamRead)> {
         let url = Url::parse(&get_binance_ws_url()).map_err(|e| {
             PriceIndexError::WebSocketError(format!("Failed to parse WebSocket URL: {}", e))
@@ -108,7 +133,17 @@ impl BinanceExchange {
         Ok(ws_stream.split())
     }
 
-    // Function to merge updates into the order book
+    /// Merges order book updates into the existing order book
+    ///
+    /// This function:
+    /// 1. Applies incremental updates to the order book
+    /// 2. Adds new price levels, updates existing ones, or removes levels with zero quantity
+    /// 3. Sorts the orders appropriately (bids descending, asks ascending)
+    ///
+    /// Args:
+    ///   existing_orders: The current list of orders to update
+    ///   updates: The new orders to apply as updates
+    ///   is_bids: Whether we're updating bids (true) or asks (false)
     fn merge_order_book_updates(
         existing_orders: &mut Vec<Order>,
         updates: &[Order],
@@ -161,6 +196,13 @@ impl BinanceExchange {
         *existing_orders = all_orders;
     }
 
+    /// Handles WebSocket messages and updates the order book
+    ///
+    /// This function:
+    /// 1. Processes incoming WebSocket messages
+    /// 2. Updates the order book with incremental changes
+    /// 3. Maintains the WebSocket connection with ping/pong messages
+    /// 4. Handles connection errors and closures
     async fn handle_websocket_messages(
         mut read: WsStreamRead,
         mut write: WsSink,
@@ -277,7 +319,13 @@ impl BinanceExchange {
         }
     }
 
-    // Start the WebSocket connection to receive real-time updates
+    /// Starts the WebSocket connection with automatic reconnection
+    ///
+    /// This function:
+    /// 1. Establishes a WebSocket connection to Binance
+    /// 2. Spawns a task to handle WebSocket messages
+    /// 3. Implements exponential backoff for reconnection attempts
+    /// 4. Continues reconnecting indefinitely to maintain data flow
     async fn start_websocket(&self) -> Result<()> {
         let order_book = self.order_book.clone();
         let mut reconnect_attempt = 0;
@@ -318,12 +366,15 @@ impl BinanceExchange {
 
 #[async_trait]
 impl Exchange for BinanceExchange {
-    // Get the name of the exchange
+    /// Returns the name of the exchange
     fn name(&self) -> &'static str {
         "Binance"
     }
 
-    // Fetch the current order book
+    /// Fetches the current order book
+    ///
+    /// This implementation returns the in-memory order book
+    /// that's continuously updated via WebSocket
     async fn fetch_order_book(&self) -> Result<OrderBook> {
         Ok(self.order_book.read().await.clone())
     }

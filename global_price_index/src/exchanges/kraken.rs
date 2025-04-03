@@ -8,6 +8,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
+/// Kraken-specific implementation of the order book
+/// Contains bids and asks in the format returned by Kraken API
 #[derive(Debug, Serialize, Deserialize)]
 struct KrakenOrderBook {
     #[serde(deserialize_with = "deserialize_kraken_orders")]
@@ -16,7 +18,10 @@ struct KrakenOrderBook {
     asks: Vec<Order>,
 }
 
-// Kraken returns [price: String, volume: String, timestamp: Integer (Unix time)]
+/// Custom deserializer for Kraken order data format
+///
+/// Kraken returns orders as [price: String, volume: String, timestamp: Integer (Unix time)]
+/// This function converts them to our Order struct with f64 values for price and quantity
 fn deserialize_kraken_orders<'de, D>(deserializer: D) -> std::result::Result<Vec<Order>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -45,23 +50,40 @@ where
         .collect()
 }
 
+/// Represents the result field from Kraken API response
+/// Contains the order book data for XBTUSDT trading pair
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KrakenResult {
     #[serde(rename = "XBTUSDT")]
     xbtusdt: KrakenOrderBook,
 }
 
+/// The full response from Kraken API
+/// Contains an error field and the result data
 #[derive(Debug, Serialize, Deserialize)]
 struct KrakenResponse {
     error: Vec<String>,
     result: KrakenResult,
 }
 
+/// KrakenExchange implements the Exchange trait for Kraken
+///
+/// This exchange uses REST API polling rather than WebSockets,
+/// making periodic HTTP requests to fetch the current order book.
 pub struct KrakenExchange {
     client: reqwest::Client,
 }
 
 impl KrakenExchange {
+    /// Creates a new KrakenExchange instance
+    ///
+    /// This function:
+    /// 1. Creates an HTTP client with a 5-second timeout
+    /// 2. Verifies the exchange is accessible by making a test API request
+    /// 3. Returns the exchange instance if successful
+    ///
+    /// Returns:
+    ///   Result<Self>: The exchange instance or an error
     pub async fn new() -> Result<Self> {
         // Create a new client with custom configuration
         let client = reqwest::Client::builder()
@@ -94,10 +116,20 @@ impl KrakenExchange {
 
 #[async_trait]
 impl Exchange for KrakenExchange {
+    /// Returns the name of the exchange
     fn name(&self) -> &'static str {
         "Kraken"
     }
 
+    /// Fetches the current order book from Kraken
+    ///
+    /// This function:
+    /// 1. Makes an HTTP GET request to the Kraken API
+    /// 2. Parses the JSON response into KrakenResponse
+    /// 3. Converts the Kraken-specific format to our common OrderBook model
+    ///
+    /// Returns:
+    ///   Result<OrderBook>: The order book on success, or an error on failure
     async fn fetch_order_book(&self) -> Result<OrderBook> {
         let params = [("pair", "XBTUSDT"), ("count", "100")];
         let response: KrakenResponse = self

@@ -11,6 +11,12 @@ use actix_files as fs;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use std::sync::Arc;
 
+/// AppState holds references to all exchange instances
+///
+/// This struct is shared across HTTP requests and contains
+/// thread-safe references to each exchange implementation.
+/// It allows the API handlers to access exchange data without
+/// creating new exchange instances for each request.
 #[derive(Clone)]
 pub struct AppState {
     pub binance: Arc<BinanceExchange>,
@@ -19,6 +25,15 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Creates a new AppState with the provided exchange instances
+    ///
+    /// Args:
+    ///   binance: Arc-wrapped BinanceExchange
+    ///   kraken: Arc-wrapped KrakenExchange
+    ///   huobi: Arc-wrapped HuobiExchange
+    ///
+    /// Returns:
+    ///   A new AppState instance
     pub fn new(
         binance: Arc<BinanceExchange>,
         kraken: Arc<KrakenExchange>,
@@ -32,6 +47,17 @@ impl AppState {
     }
 }
 
+/// HTTP handler for the /global-price endpoint
+///
+/// This function:
+/// 1. Fetches prices from all exchanges
+/// 2. Gracefully handles individual exchange failures
+/// 3. Creates a GlobalPriceIndex with time-based weighting
+/// 4. Returns the index as JSON response
+///
+/// Returns:
+///   HTTP 200 with GlobalPriceIndex JSON on success
+///   HTTP 503 if no exchange prices are available
 pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     // Create a vector to store the prices from all exchanges
     let mut exchange_prices = Vec::new();
@@ -73,6 +99,12 @@ pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(global_index)
 }
 
+/// HTTP handler for the root (/) endpoint
+///
+/// Serves the index.html file from the templates directory
+///
+/// Returns:
+///   The index.html file as a response
 pub async fn index() -> impl Responder {
     let frontend_dir = get_frontend_dir();
     let templates_dir = get_templates_dir();
@@ -82,6 +114,15 @@ pub async fn index() -> impl Responder {
     fs::NamedFile::open_async(path).await
 }
 
+/// Starts the HTTP server with all routes and exchange instances
+///
+/// This function:
+/// 1. Initializes all exchange connections
+/// 2. Sets up API routes and static file serving
+/// 3. Starts the server on the configured address
+///
+/// Returns:
+///   std::io::Result<()>: Ok on successful server exit, Err otherwise
 pub async fn start_server() -> std::io::Result<()> {
     // Get server address from config
     let addr = get_server_addr();
