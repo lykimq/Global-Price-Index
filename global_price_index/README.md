@@ -16,6 +16,7 @@ This service computes a global BTC/USDT price index by:
 - REST APIs for Kraken/Huobi.
 - Thread-safe state management (`Arc<RwLock<OrderBook>>`).
 - Extensible architecture for new exchanges.
+- Separate API and static file servers for better security and scalability.
 
 ## Features
 
@@ -73,13 +74,22 @@ mid_price = (best_bid + best_ask)/2
 
 ## Frontend Access
 
-The web interface for the Global Price Index is accessible at:
+The application runs two separate servers:
+
+1. **API Server** (Port 8080):
 ```
-http://localhost:8080
+http://localhost:8080/global-price
 ```
+Handles all API requests with CORS enabled for the frontend.
+
+2. **Static File Server** (Port 8081):
+```
+http://localhost:8081
+```
+Serves the web interface and static assets.
 
 **Note on HTTP vs HTTPS:**
-- The service currently uses HTTP for its local web interface
+- The service currently uses HTTP for its local web interface and API
 - This is appropriate for development and internal network usage
 - For production deployment, configure with TLS/HTTPS using a reverse proxy like Nginx or an application load balancer
 
@@ -88,7 +98,7 @@ http://localhost:8080
 **Global Price Index**
 
 ```
-GET /global-price
+GET http://localhost:8080/global-price
 ```
 
 **Response**
@@ -120,7 +130,7 @@ GET /global-price
 
 The application uses a TOML-based configuration system for better type safety and flexibility. Key configuration sections include:
 
-- **Server**: Host and port settings
+- **Server**: Host and port settings for API server
 - **Frontend**: Directory paths for static assets and templates
 - **Exchange Endpoints**: URLs for Binance, Kraken, and Huobi
 - **Exchange Config**: Connection parameters (reconnect delays, ping intervals, retry counts)
@@ -128,25 +138,25 @@ The application uses a TOML-based configuration system for better type safety an
 
 Configuration is loaded at startup from the `config.toml` file and accessed through the `config` module, which provides type-safe accessor methods for all settings.
 
-### Sample Configuration
-
-```toml
-# Price Weighting Configuration
-[price_weighting]
-# Controls how quickly older prices lose influence (in seconds)
-# Larger value = slower decay, smaller value = faster decay
-decay_factor = 300  # 5 minutes
-```
-
 ## Security
 
 The current implementation includes several security features:
+
+- **Server Separation**:
+  + API server runs on port 8080 with CORS enabled for frontend access
+  + Static file server runs on port 8081 for serving web interface
+  + Clear separation of concerns for better security
+
+- **CORS Configuration**:
+  + API server configured with specific CORS rules
+  + Only allows requests from the static file server origin
+  + Restricts allowed HTTP methods and headers
 
 - **Secure Communication**:
   + Uses HTTPS for outbound REST API calls to exchanges (external communication)
   + Uses WSS (WebSocket Secure) for real-time data streams from exchanges
   + Default TLS verification enabled in HTTP and WebSocket clients for all external APIs
-  + Note: Internal web server uses HTTP by default and should be placed behind a TLS-terminating proxy for production
+  + Note: Internal servers use HTTP by default and should be placed behind a TLS-terminating proxy for production
 
 - **Input Validation**:
   + Validates all price data before processing (non-empty, positive values)
@@ -172,6 +182,7 @@ The current implementation includes several security features:
 ## Prerequisites
 
 - Rust (latest stable version)
+- Node.js and npm (for frontend development)
 - `make` (for build automation)
 
 ## Installation
@@ -182,14 +193,19 @@ git clone <repository-url>
 cd global_price_index
 ```
 
-2. Install dependencies:
+2. Install backend dependencies:
 ```bash
 cargo build --release
-# or
-make install
 ```
 
-3. Configure the application:
+3. Install frontend dependencies:
+```bash
+cd frontend
+npm install
+npm run build  # Compiles TypeScript files
+```
+
+4. Configure the application:
 ```bash
 cp config.toml.example config.toml
 # Edit config.toml with your settings
@@ -200,17 +216,17 @@ cp config.toml.example config.toml
 Run the application:
 ```bash
 cargo run --release
-# or
-make run
 ```
+
+This will start both servers:
+- API server on http://localhost:8080
+- Static file server on http://localhost:8081
 
 ## Testing
 
 Run all tests:
 ```bash
 cargo test
-# or
-make test
 ```
 
 For WebSocket tests (which may take longer):

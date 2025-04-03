@@ -1,14 +1,12 @@
 // Exchange trait, factory
 
-use crate::config::{
-    get_frontend_dir, get_index_html, get_server_addr, get_static_dir, get_templates_dir,
-};
+use crate::config::{get_api_server_addr, get_frontend_server_url};
 use crate::exchanges::{
     binance::BinanceExchange, huobi::HuobiExchange, kraken::KrakenExchange, Exchange,
 };
 use crate::models::GlobalPriceIndex;
-use actix_files as fs;
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_cors::Cors;
+use actix_web::{http::header, middleware, web, App, HttpResponse, HttpServer, Responder};
 use std::sync::Arc;
 
 /// AppState holds references to all exchange instances
@@ -99,38 +97,44 @@ pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(global_index)
 }
 
-/// HTTP handler for the root (/) endpoint
+/// Configures the API routes and state
 ///
-/// Serves the index.html file from the templates directory
-///
-/// Returns:
-///   The index.html file as a response
-pub async fn index() -> impl Responder {
-    let frontend_dir = get_frontend_dir();
-    let templates_dir = get_templates_dir();
-    let index_html = get_index_html();
+/// This function:
+/// 1. Initializes exchange connections
+/// 2. Sets up the AppState
+/// 3. Configures the /global-price route
+pub async fn configure_api_routes() -> AppState {
+    // Initialize exchanges
+    let binance = Arc::new(
+        BinanceExchange::new()
+            .await
+            .expect("Failed to create Binance exchange"),
+    );
+    let kraken = Arc::new(
+        KrakenExchange::new()
+            .await
+            .expect("Failed to create Kraken exchange"),
+    );
+    let huobi = Arc::new(
+        HuobiExchange::new()
+            .await
+            .expect("Failed to create Huobi exchange"),
+    );
 
-    let path = format!("./{}/{}/{}", frontend_dir, templates_dir, index_html);
-    fs::NamedFile::open_async(path).await
+    // Create and return the app state
+    AppState::new(binance, kraken, huobi)
 }
 
-/// Starts the HTTP server with all routes and exchange instances
+/// Starts the HTTP server with API routes and exchange instances
 ///
 /// This function:
 /// 1. Initializes all exchange connections
-/// 2. Sets up API routes and static file serving
-/// 3. Starts the server on the configured address
-///
-/// Returns:
-///   std::io::Result<()>: Ok on successful server exit, Err otherwise
-pub async fn start_server() -> std::io::Result<()> {
+/// 2. Sets up the /global-price API route with CORS support
+/// 3. Starts the server
+pub async fn start_server() -> std::io::Result<actix_web::dev::Server> {
     // Get server address from config
-    let addr = get_server_addr();
-
-    // Get frontend paths from config
-    let frontend_dir = get_frontend_dir();
-    let static_dir = get_static_dir();
-    let static_path = format!("./{}/{}", frontend_dir, static_dir);
+    let addr = get_api_server_addr();
+    let frontend_url = get_frontend_server_url();
 
     // Initialize exchanges
     let binance = Arc::new(
@@ -152,20 +156,20 @@ pub async fn start_server() -> std::io::Result<()> {
     // Create the app state
     let app_state = web::Data::new(AppState::new(binance, kraken, huobi));
 
-    // Start the server
-    HttpServer::new(move || {
+    // Create and start the server
+    Ok(HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin(&frontend_url)
+            .allowed_methods(vec!["GET"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
+            .wrap(middleware::Logger::default())
             .app_data(app_state.clone())
-            .route("/", web::get().to(index))
             .route("/global-price", web::get().to(get_global_price))
-            .service(
-                fs::Files::new("/static", &static_path)
-                    .show_files_listing()
-                    .prefer_utf8(true)
-                    .use_last_modified(true),
-            )
     })
     .bind(&addr)?
-    .run()
-    .await
+    .run())
 }

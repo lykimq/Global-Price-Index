@@ -29,6 +29,11 @@ class PriceDisplay {
   private lastPrices: { [key: string]: number } = {};
 
   /**
+   * The base URL for the API server
+   */
+  private readonly apiBaseUrl = "http://127.0.0.1:8080";
+
+  /**
    * Formats a number as a price with 2 decimal places.
    * price - The price to format
    * returns formatted price string (e.g., "50,432.12")
@@ -130,7 +135,7 @@ class PriceDisplay {
   public async updatePrices(): Promise<void> {
     try {
       // Fetch the latest price data from the API
-      const response = await fetch("/global-price");
+      const response = await fetch(`${this.apiBaseUrl}/global-price`);
       const data: PriceData = await response.json();
 
       // Update all sections of the UI with the new data

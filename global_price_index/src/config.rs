@@ -17,8 +17,10 @@ lazy_static! {
 /// Server configuration settings
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
-    pub host: String,
-    pub port: u16,
+    pub api_host: String,
+    pub api_port: u16,
+    pub frontend_host: String,
+    pub frontend_port: u16,
 }
 
 /// Frontend paths and file locations
@@ -111,8 +113,10 @@ impl Settings {
 
                 Ok(Self {
                     server: Server {
-                        host: "127.0.0.1".to_string(),
-                        port: 8080,
+                        api_host: "127.0.0.1".to_string(),
+                        api_port: 8080,
+                        frontend_host: "127.0.0.1".to_string(),
+                        frontend_port: 8081,
                     },
                     frontend: Frontend {
                         dir: "frontend".to_string(),
@@ -217,10 +221,37 @@ pub fn get_decay_factor() -> f64 {
     SETTINGS.read().unwrap().price_weighting.decay_factor
 }
 
-/// Returns the server address string in format "host:port"
-pub fn get_server_addr() -> String {
+/// Returns the API server address in format "host:port"
+pub fn get_api_server_addr() -> String {
     let settings = SETTINGS.read().unwrap();
-    format!("{}:{}", settings.server.host, settings.server.port)
+    format!("{}:{}", settings.server.api_host, settings.server.api_port)
+}
+
+/// Returns the frontend server address in format "host:port"
+pub fn get_frontend_server_addr() -> String {
+    let settings = SETTINGS.read().unwrap();
+    format!(
+        "{}:{}",
+        settings.server.frontend_host, settings.server.frontend_port
+    )
+}
+
+/// Returns the API server URL for CORS configuration
+pub fn get_api_server_url() -> String {
+    let settings = SETTINGS.read().unwrap();
+    format!(
+        "http://{}:{}",
+        settings.server.api_host, settings.server.api_port
+    )
+}
+
+/// Returns the frontend server URL for CORS configuration
+pub fn get_frontend_server_url() -> String {
+    let settings = SETTINGS.read().unwrap();
+    format!(
+        "http://{}:{}",
+        settings.server.frontend_host, settings.server.frontend_port
+    )
 }
 
 /// Returns the frontend directory path

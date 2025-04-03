@@ -72,23 +72,6 @@ async fn test_global_price_endpoint() {
     }
 }
 
-/// Tests the index endpoint (root path) to ensure it returns a successful response.
-///
-/// This test verifies:
-/// 1. The root endpoint returns a successful HTTP status
-#[actix_web::test]
-async fn test_index_endpoint() {
-    let app = test::init_service(
-        actix_web::App::new().route("/", web::get().to(global_price_index::api::index)),
-    )
-    .await;
-
-    let req = test::TestRequest::get().uri("/").to_request();
-    let resp = test::call_service(&app, req).await;
-
-    assert!(resp.status().is_success());
-}
-
 /// Tests that the API properly handles error cases, specifically
 /// responding with appropriate error status codes for invalid paths.
 ///
