@@ -1,6 +1,6 @@
 // OrderBook, BidAsk, MidPrice
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
 /// Represents a single order in an order book with price and quantity
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,29 +39,30 @@ pub struct GlobalPriceIndex {
 /// Custom serialization/deserialization module for SystemTime timestamps
 mod timestamp_serde {
     use super::*;
+    use chrono::{DateTime, Utc};
     use serde::{Deserializer, Serializer};
     use std::time::SystemTime;
 
-    /// Serializes a SystemTime to milliseconds since UNIX epoch
+    /// Serializes a SystemTime to ISO 8601 format with millisecond precision
     pub fn serialize<S>(time: &SystemTime, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let timestamp = time
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| serde::ser::Error::custom("Invalid timestamp"))?
-            .as_millis();
-        serializer.serialize_i64(timestamp as i64)
+        let datetime: DateTime<Utc> = (*time).into();
+        // Format with 3 decimal places (milliseconds)
+        let formatted = datetime.format("%Y-%m-%dT%H:%M:%S.%3fZ").to_string();
+        serializer.serialize_str(&formatted)
     }
 
-    /// Deserializes milliseconds since UNIX epoch to SystemTime
+    /// Deserializes ISO 8601 string to SystemTime
     pub fn deserialize<'de, D>(deserializer: D) -> Result<SystemTime, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let timestamp = i64::deserialize(deserializer)?;
-        let duration = std::time::Duration::from_millis(timestamp as u64);
-        Ok(UNIX_EPOCH + duration)
+        let time_str = String::deserialize(deserializer)?;
+        let datetime = DateTime::parse_from_rfc3339(&time_str)
+            .map_err(|e| serde::de::Error::custom(format!("Invalid timestamp format: {}", e)))?;
+        Ok(SystemTime::from(datetime.with_timezone(&Utc)))
     }
 }
 

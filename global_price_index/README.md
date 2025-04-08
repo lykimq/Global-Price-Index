@@ -104,25 +104,25 @@ GET http://localhost:8080/global-price
 **Response**
 ```json
 {
-    "price": 84640.55,
-    "timestamp": 1743583727.328,
-    "exchange_prices": [
-        {
-            "exchange": "Binance",
-            "mid_price": 84642.0,
-            "timestamp": 1743583726.924
-        },
-        {
-            "exchange": "Kraken",
-            "mid_price": 84648.15,
-            "timestamp": 1743583726.987
-        },
-        {
-            "exchange": "Huobi",
-            "mid_price": 84631.51,
-            "timestamp": 1743583727.328
-        }
-    ]
+  "price": 78895.99333333333,
+  "timestamp": "2025-04-08T09:32:35.932Z",
+  "exchange_prices": [
+    {
+      "exchange": "Binance",
+      "mid_price": 78897.22,
+      "timestamp": "2025-04-08T09:32:35.616Z"
+    },
+    {
+      "exchange": "Kraken",
+      "mid_price": 78894.35,
+      "timestamp": "2025-04-08T09:32:35.664Z"
+    },
+    {
+      "exchange": "Huobi",
+      "mid_price": 78896.41,
+      "timestamp": "2025-04-08T09:32:35.932Z"
+    }
+  ]
 }
 ```
 
