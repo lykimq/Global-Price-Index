@@ -160,6 +160,7 @@ pub async fn start_server() -> std::io::Result<actix_web::dev::Server> {
     Ok(HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin(&frontend_url)
+            .allowed_origin(&frontend_url.replace("127.0.0.1", "localhost"))
             .allowed_methods(vec!["GET"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
             .max_age(3600);
