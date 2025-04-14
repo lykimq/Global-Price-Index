@@ -103,7 +103,7 @@ pub async fn get_global_price(data: web::Data<AppState>) -> impl Responder {
 /// 1. Initializes exchange connections
 /// 2. Sets up the AppState
 /// 3. Configures the /global-price route
-pub async fn configure_api_routes() -> AppState {
+pub async fn initialize_app_state() -> AppState {
     // Initialize exchanges
     let binance = Arc::new(
         BinanceExchange::new()
@@ -137,24 +137,7 @@ pub async fn start_server() -> std::io::Result<actix_web::dev::Server> {
     let frontend_url = get_frontend_server_url();
 
     // Initialize exchanges
-    let binance = Arc::new(
-        BinanceExchange::new()
-            .await
-            .expect("Failed to create Binance exchange"),
-    );
-    let kraken = Arc::new(
-        KrakenExchange::new()
-            .await
-            .expect("Failed to create Kraken exchange"),
-    );
-    let huobi = Arc::new(
-        HuobiExchange::new()
-            .await
-            .expect("Failed to create Huobi exchange"),
-    );
-
-    // Create the app state
-    let app_state = web::Data::new(AppState::new(binance, kraken, huobi));
+    let app_state = web::Data::new(initialize_app_state().await);
 
     // Create and start the server
     Ok(HttpServer::new(move || {
